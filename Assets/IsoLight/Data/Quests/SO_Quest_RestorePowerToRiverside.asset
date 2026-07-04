@@ -22,6 +22,9 @@ MonoBehaviour:
   - Id: speak_with_mara
     Description: Speak with Mara Vey
     Status: 0
+  - Id: resolve_power_priorities
+    Description: Resolve Riverside's Power Priorities
+    Status: 0
   - Id: inspect_key_systems
     Description: 'Inspect Key Systems: 0/6'
     Status: 0
