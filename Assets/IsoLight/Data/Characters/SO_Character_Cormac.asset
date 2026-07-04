@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: cormac
   DisplayName: Cormac
-  Role: Медик
+  Role: "\u041C\u0435\u0434\u0438\u043A"
   Portrait: {fileID: 0}
   MaxHealth: 95
   MaxEnergy: 65

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: dax
   DisplayName: Dax
-  Role: Практик
+  Role: "\u041F\u0440\u0430\u043A\u0442\u0438\u043A"
   Portrait: {fileID: 0}
   MaxHealth: 100
   MaxEnergy: 50

@@ -737,7 +737,8 @@ namespace IsoLight.Editor
             root.transform.SetParent(parent);
             root.transform.position = position;
 
-            CreateCube(root.transform, $"{name}_Marker", position, new Vector3(0.55f, 0.18f, 0.55f), markerMaterial, false);
+            var markerObject = CreateCube(root.transform, $"{name}_Marker", position, new Vector3(0.55f, 0.18f, 0.55f), markerMaterial, false);
+            var markerRenderer = markerObject != null ? markerObject.GetComponent<Renderer>() : null;
 
             var lightObject = new GameObject($"{name}_Light");
             lightObject.transform.SetParent(root.transform);
@@ -748,7 +749,14 @@ namespace IsoLight.Editor
             light.intensity = intensity;
             light.range = range;
 
-            return new PowerResultVisualState(choice, root, new[] { light }, blink, enableForSplitLoad);
+            return new PowerResultVisualState(
+                choice,
+                root,
+                light != null ? new[] { light } : Array.Empty<Light>(),
+                markerRenderer != null ? new[] { markerRenderer } : Array.Empty<Renderer>(),
+                markerMaterial != null ? new[] { markerMaterial } : Array.Empty<Material>(),
+                blink,
+                enableForSplitLoad);
         }
 
         private static void CreatePointLight(string name, Vector3 position, Color color, float intensity, float range)

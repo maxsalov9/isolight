@@ -14,38 +14,53 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: restore_power_to_riverside
   Title: Restore Power to Riverside
-  Description: Основная миссия Riverside: восстановить питание, защитить генератор и принять финальное решение.
+  Description: "\u041E\u0441\u043D\u043E\u0432\u043D\u0430\u044F \u043C\u0438\u0441\u0441\u0438\u044F
+    Riverside: \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C
+    \u043F\u0438\u0442\u0430\u043D\u0438\u0435, \u0437\u0430\u0449\u0438\u0442\u0438\u0442\u044C
+    \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440 \u0438 \u043F\u0440\u0438\u043D\u044F\u0442\u044C
+    \u0444\u0438\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435."
   Objectives:
   - Id: reach_riverside_shelter
-    Description: Добраться до убежища Riverside
+    Description: "\u0414\u043E\u0431\u0440\u0430\u0442\u044C\u0441\u044F \u0434\u043E
+      \u0443\u0431\u0435\u0436\u0438\u0449\u0430 Riverside"
     Status: 0
   - Id: speak_with_mara
-    Description: Поговорить с Mara Vey
+    Description: "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C \u0441
+      Mara Vey"
     Status: 0
   - Id: resolve_power_priorities
-    Description: Разобраться с энергетическими приоритетами Riverside
+    Description: "\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C\u0441\u044F
+      \u0441 \u044D\u043D\u0435\u0440\u0433\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u043C\u0438
+      \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u0430\u043C\u0438 Riverside"
     Status: 0
   - Id: inspect_key_systems
-    Description: 'Осмотреть ключевые системы: 0/6'
+    Description: "\u041E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u0435
+      \u0441\u0438\u0441\u0442\u0435\u043C\u044B: 0/6"
     Status: 0
   - Id: find_breaker_modules
-    Description: 'Найти 2 breaker-модуля: 0/2'
+    Description: "\u041D\u0430\u0439\u0442\u0438 2 breaker-\u043C\u043E\u0434\u0443\u043B\u044F:
+      0/2"
     Status: 0
   - Id: repair_generator_line
-    Description: Починить линию Generator G-17
+    Description: "\u041F\u043E\u0447\u0438\u043D\u0438\u0442\u044C \u043B\u0438\u043D\u0438\u044E
+      Generator G-17"
     Status: 0
   - Id: start_generator_g17
-    Description: Запустить Generator G-17
+    Description: "\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C Generator
+      G-17"
     Status: 0
   - Id: defend_generator_g17
-    Description: Защитить Generator G-17
+    Description: "\u0417\u0430\u0449\u0438\u0442\u0438\u0442\u044C Generator G-17"
     Status: 0
   - Id: allocate_power
-    Description: Распределить питание
+    Description: "\u0420\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C
+      \u043F\u0438\u0442\u0430\u043D\u0438\u0435"
     Status: 0
   - Id: face_consequences
-    Description: Принять последствия решения
+    Description: "\u041F\u0440\u0438\u043D\u044F\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F
+      \u0440\u0435\u0448\u0435\u043D\u0438\u044F"
     Status: 0
   - Id: leave_riverside
-    Description: Покинуть Riverside / миссия завершена
+    Description: "\u041F\u043E\u043A\u0438\u043D\u0443\u0442\u044C Riverside / \u043C\u0438\u0441\u0441\u0438\u044F
+      \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430"
     Status: 0
