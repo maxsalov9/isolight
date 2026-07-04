@@ -5,6 +5,7 @@ using IsoLight.Characters;
 using IsoLight.Combat;
 using IsoLight.Core;
 using IsoLight.Dialogue;
+using IsoLight.Enemies;
 using IsoLight.Input;
 using IsoLight.Interaction;
 using IsoLight.Party;
@@ -25,8 +26,10 @@ namespace IsoLight.Editor
     {
         private const string ScenePath = "Assets/IsoLight/Scenes/Prototype/Riverside_Prototype.unity";
         private const string CharacterDataPath = "Assets/IsoLight/Data/Characters";
+        private const string EnemyDataPath = "Assets/IsoLight/Data/Enemies";
         private const string QuestDataPath = "Assets/IsoLight/Data/Quests";
         private const string DialogueDataPath = "Assets/IsoLight/Data/Dialogues";
+        private const string PowerSystemDataPath = "Assets/IsoLight/Data/PowerSystems";
         private const string MaterialsPath = "Assets/IsoLight/Materials";
 
         [MenuItem("IsoLight/Build Riverside Prototype Scene")]
@@ -66,9 +69,11 @@ namespace IsoLight.Editor
             var partyCharacters = CreatePlaceholderParty(playerPartyRoot.transform, materials);
             var questData = EnsureQuestDataAsset();
             var dialogueAssets = EnsureDialogueAssets(questData);
+            var powerSystemAssets = EnsurePowerSystemAssets();
+            var enemyDataAssets = EnsureEnemyDataAssets();
 
-            var dialoguePanel = CreatePlaceholderUI(uiRoot.transform, questManager);
-            CreateQuestInteractables(interactablesRoot.transform, materials);
+            var uiRefs = CreatePlaceholderUI(uiRoot.transform, questManager);
+            var generator = CreateQuestInteractables(interactablesRoot.transform, materials, gameManager, questManager, powerManager, combatManager, uiRefs.NotificationUI);
             CreatePlaceholderNpcs(npcsRoot.transform, dialogueAssets, materials);
 
             partyManager.SetPartyMembers(partyCharacters);
@@ -76,7 +81,20 @@ namespace IsoLight.Editor
             inputManager.SetReferences(gameManager, partyManager);
             cameraManager.SetReferences(partyManager, cameraController);
             clickToMoveController.SetReferences(gameManager, partyManager, UnityEngine.Camera.main);
-            dialogueManager.SetReferences(gameManager, questManager, dialoguePanel);
+            dialogueManager.SetReferences(gameManager, questManager, uiRefs.DialoguePanelUI);
+            powerManager.SetReferences(gameManager, relationshipManager, uiRefs.PowerAllocationBoardUI, uiRefs.ResultPanelUI);
+            powerManager.SetPowerSystems(powerSystemAssets);
+            combatManager.SetReferences(gameManager, partyManager, questManager, generator, uiRefs.NotificationUI, uiRefs.CombatStatusUI);
+            combatManager.SetEnemyData(enemyDataAssets);
+            combatManager.SetEnemyParent(enemiesRoot.transform);
+            combatManager.SetSpawnPoints(new[]
+            {
+                new Vector3(-4.6f, 0f, 7.1f),
+                new Vector3(4.6f, 0f, 7.1f),
+                new Vector3(-5.2f, 0f, 1.2f),
+                new Vector3(5.2f, 0f, 1.2f),
+                new Vector3(0f, 0f, 8.8f)
+            });
 
             AssignManagerReferences(
                 gameManager,
@@ -124,6 +142,17 @@ namespace IsoLight.Editor
             public Material WarmLightSource;
             public Material TechBlue;
             public Material DangerRed;
+        }
+
+        private sealed class PrototypeUiRefs
+        {
+            public InteractionPromptUI InteractionPromptUI;
+            public NotificationUI NotificationUI;
+            public ObjectivePanelUI ObjectivePanelUI;
+            public DialoguePanelUI DialoguePanelUI;
+            public PowerAllocationBoardUI PowerAllocationBoardUI;
+            public ResultPanelUI ResultPanelUI;
+            public CombatStatusUI CombatStatusUI;
         }
 
         private static MinimalMaterials EnsureMinimalMaterials()
@@ -207,15 +236,15 @@ namespace IsoLight.Editor
             return shader != null ? shader : Shader.Find("Standard");
         }
 
-        private static DialoguePanelUI CreatePlaceholderUI(Transform parent, QuestManager questManager)
+        private static PrototypeUiRefs CreatePlaceholderUI(Transform parent, QuestManager questManager)
         {
             var promptObject = new GameObject("InteractionPromptUI");
             promptObject.transform.SetParent(parent);
-            promptObject.AddComponent<InteractionPromptUI>();
+            var interactionPrompt = promptObject.AddComponent<InteractionPromptUI>();
 
             var notificationObject = new GameObject("NotificationUI");
             notificationObject.transform.SetParent(parent);
-            notificationObject.AddComponent<NotificationUI>();
+            var notificationUI = notificationObject.AddComponent<NotificationUI>();
 
             var objectiveObject = new GameObject("ObjectivePanelUI");
             objectiveObject.transform.SetParent(parent);
@@ -224,7 +253,30 @@ namespace IsoLight.Editor
 
             var dialogueObject = new GameObject("DialoguePanelUI");
             dialogueObject.transform.SetParent(parent);
-            return dialogueObject.AddComponent<DialoguePanelUI>();
+            var dialoguePanel = dialogueObject.AddComponent<DialoguePanelUI>();
+
+            var powerBoardObject = new GameObject("PowerAllocationBoardUI");
+            powerBoardObject.transform.SetParent(parent);
+            var powerBoard = powerBoardObject.AddComponent<PowerAllocationBoardUI>();
+
+            var resultPanelObject = new GameObject("ResultPanelUI");
+            resultPanelObject.transform.SetParent(parent);
+            var resultPanel = resultPanelObject.AddComponent<ResultPanelUI>();
+
+            var combatStatusObject = new GameObject("CombatStatusUI");
+            combatStatusObject.transform.SetParent(parent);
+            var combatStatus = combatStatusObject.AddComponent<CombatStatusUI>();
+
+            return new PrototypeUiRefs
+            {
+                InteractionPromptUI = interactionPrompt,
+                NotificationUI = notificationUI,
+                ObjectivePanelUI = objectivePanel,
+                DialoguePanelUI = dialoguePanel,
+                PowerAllocationBoardUI = powerBoard,
+                ResultPanelUI = resultPanel,
+                CombatStatusUI = combatStatus
+            };
         }
 
         private static void CreateGround(Transform parent, MinimalMaterials materials)
@@ -774,7 +826,14 @@ namespace IsoLight.Editor
             }
         }
 
-        private static void CreateQuestInteractables(Transform parent, MinimalMaterials materials)
+        private static GeneratorG17 CreateQuestInteractables(
+            Transform parent,
+            MinimalMaterials materials,
+            GameManager gameManager,
+            QuestManager questManager,
+            PowerManager powerManager,
+            CombatManager combatManager,
+            NotificationUI notificationUI)
         {
             CreateBreakerModule(parent, "BreakerModule_A", new Vector3(-5f, 0.25f, 4f), materials);
             CreateBreakerModule(parent, "BreakerModule_B", new Vector3(5f, 0.25f, 4f), materials);
@@ -822,7 +881,9 @@ namespace IsoLight.Editor
                 new Vector3(0f, 0.5f, 12f),
                 materials.TechBlue);
 
-            CreateSwitchRoomConsole(parent, new Vector3(0f, 0.6f, -8f), materials);
+            var generator = CreateGeneratorG17(parent, new Vector3(0f, 0.9f, 3f), materials, gameManager, combatManager, questManager, notificationUI);
+            CreateSwitchRoomConsole(parent, new Vector3(0f, 0.6f, -8f), materials, gameManager, questManager, powerManager, notificationUI);
+            return generator;
         }
 
         private static void CreateBreakerModule(Transform parent, string name, Vector3 position, MinimalMaterials materials)
@@ -868,7 +929,41 @@ namespace IsoLight.Editor
             inspectable.ConfigurePowerSystem(systemType, inspectionMessage);
         }
 
-        private static void CreateSwitchRoomConsole(Transform parent, Vector3 position, MinimalMaterials materials)
+        private static GeneratorG17 CreateGeneratorG17(
+            Transform parent,
+            Vector3 position,
+            MinimalMaterials materials,
+            GameManager gameManager,
+            CombatManager combatManager,
+            QuestManager questManager,
+            NotificationUI notificationUI)
+        {
+            var generatorObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            generatorObject.name = "GeneratorG17";
+            generatorObject.transform.SetParent(parent);
+            generatorObject.transform.position = position;
+            generatorObject.transform.localScale = new Vector3(2.6f, 1.8f, 1.3f);
+
+            var renderer = generatorObject.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = materials.RustMetal;
+            }
+
+            var generator = generatorObject.AddComponent<GeneratorG17>();
+            generator.Configure("Repair / Start Generator G-17", "[Click]", 5f);
+            generator.SetReferences(gameManager, combatManager, questManager, notificationUI);
+            return generator;
+        }
+
+        private static void CreateSwitchRoomConsole(
+            Transform parent,
+            Vector3 position,
+            MinimalMaterials materials,
+            GameManager gameManager,
+            QuestManager questManager,
+            PowerManager powerManager,
+            NotificationUI notificationUI)
         {
             var consoleObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
             consoleObject.name = "SwitchRoomConsole";
@@ -884,6 +979,7 @@ namespace IsoLight.Editor
 
             var console = consoleObject.AddComponent<SwitchRoomConsole>();
             console.Configure("Use Switch Room Console", "[Click]", 5f);
+            console.SetReferences(gameManager, questManager, powerManager, notificationUI);
         }
 
         private static void CreatePlaceholderNpcs(Transform parent, Dictionary<string, DialogueData> dialogueAssets, MinimalMaterials materials)
@@ -985,6 +1081,221 @@ namespace IsoLight.Editor
             EditorUtility.SetDirty(characterData);
 
             return characterData;
+        }
+
+        private static List<EnemyData> EnsureEnemyDataAssets()
+        {
+            var scavenger = EnsureEnemyDataAsset(
+                "SO_Enemy_RaiderScavenger",
+                "raider_scavenger",
+                "Raider Scavenger",
+                45,
+                8,
+                5f,
+                1.6f,
+                2.6f,
+                EnemyRole.Scavenger);
+            var gunner = EnsureEnemyDataAsset(
+                "SO_Enemy_RaiderGunner",
+                "raider_gunner",
+                "Raider Gunner",
+                60,
+                12,
+                7f,
+                2.1f,
+                2.2f,
+                EnemyRole.Gunner);
+            var runner = EnsureEnemyDataAsset(
+                "SO_Enemy_RaiderRunner",
+                "raider_runner",
+                "Raider Runner",
+                38,
+                7,
+                3.2f,
+                1.1f,
+                3.8f,
+                EnemyRole.Runner);
+            var saboteur = EnsureEnemyDataAsset(
+                "SO_Enemy_RaiderSaboteur",
+                "raider_saboteur",
+                "Raider Saboteur",
+                50,
+                10,
+                2.8f,
+                1.4f,
+                3.1f,
+                EnemyRole.Saboteur);
+
+            return new List<EnemyData>
+            {
+                scavenger,
+                scavenger,
+                gunner,
+                runner,
+                saboteur
+            };
+        }
+
+        private static EnemyData EnsureEnemyDataAsset(
+            string assetName,
+            string id,
+            string displayName,
+            int maxHealth,
+            int damage,
+            float attackRange,
+            float attackCooldown,
+            float moveSpeed,
+            EnemyRole role)
+        {
+            var path = $"{EnemyDataPath}/{assetName}.asset";
+            var enemyData = AssetDatabase.LoadAssetAtPath<EnemyData>(path);
+
+            if (enemyData == null)
+            {
+                enemyData = ScriptableObject.CreateInstance<EnemyData>();
+                AssetDatabase.CreateAsset(enemyData, path);
+            }
+
+            enemyData.Id = id;
+            enemyData.DisplayName = displayName;
+            enemyData.MaxHealth = maxHealth;
+            enemyData.Damage = damage;
+            enemyData.AttackRange = attackRange;
+            enemyData.AttackCooldown = attackCooldown;
+            enemyData.MoveSpeed = moveSpeed;
+            enemyData.Role = role;
+            EditorUtility.SetDirty(enemyData);
+            return enemyData;
+        }
+
+        private static List<PowerSystemData> EnsurePowerSystemAssets()
+        {
+            return new List<PowerSystemData>
+            {
+                EnsurePowerSystemAsset(
+                    "SO_Power_WaterFilters",
+                    "water_filters",
+                    "Water Filters",
+                    "Стабильное питание для фильтров воды и насосов качества.",
+                    35,
+                    "Чистая вода, меньше болезней, Dr. Sela получает аргумент, который можно измерить жизнями.",
+                    "Hydroponic Farm остается без нужного питания, и Ivo теряет часть будущего урожая.",
+                    "Dr. Sela / Cormac",
+                    new[] { "Ivo" },
+                    PowerChoice.WaterFilters),
+                EnsurePowerSystemAsset(
+                    "SO_Power_HydroponicFarm",
+                    "hydroponic_farm",
+                    "Hydroponic Farm",
+                    "Питание для ламп, насосов и питательной линии фермы.",
+                    40,
+                    "Рассада выживет, а у Riverside останется шанс на еду после ближайших запасов.",
+                    "Фильтры воды останутся нестабильными, и Dr. Sela будет считать это отложенной катастрофой.",
+                    "Ivo / Nyra",
+                    new[] { "Dr. Sela" },
+                    PowerChoice.HydroponicFarm),
+                EnsurePowerSystemAsset(
+                    "SO_Power_DefenseGrid",
+                    "defense_grid",
+                    "Defense Grid",
+                    "Питание электрозабора, прожекторов и базовой защиты периметра.",
+                    30,
+                    "Hale получает рабочий периметр, и Riverside становится сложнее взять налетом.",
+                    "Сцена и гражданские системы снова покажутся вторичными.",
+                    "Hale",
+                    new[] { "Edda" },
+                    PowerChoice.DefenseGrid),
+                EnsurePowerSystemAsset(
+                    "SO_Power_PublicStage",
+                    "public_stage",
+                    "Public Stage",
+                    "Свет для общей сцены, собраний и публичного порядка.",
+                    15,
+                    "Edda получает место, где люди снова видят друг друга, а не только дефицит.",
+                    "Hale и прагматики назовут это светом, который не держит ворота.",
+                    "Edda",
+                    new[] { "Hale", "прагматики" },
+                    PowerChoice.PublicStage),
+                EnsurePowerSystemAsset(
+                    "SO_Power_Workshop",
+                    "workshop",
+                    "Workshop",
+                    "Питание для зарядной стойки, инструментов и ремонтного стенда.",
+                    20,
+                    "Greer сможет чинить то, что держит Riverside живым дольше одного вечера.",
+                    "Sela и Ivo будут видеть в этом ремонт вместо немедленного спасения воды или еды.",
+                    "Greer / Dax",
+                    new[] { "Dr. Sela", "Ivo" },
+                    PowerChoice.Workshop),
+                EnsurePowerSystemAsset(
+                    "SO_Power_RelayStation",
+                    "relay_station",
+                    "Relay Station",
+                    "Питание релейной антенны и терминала связи.",
+                    25,
+                    "Lysa получает шанс поймать Blind Protocol и доказать, что Riverside не один.",
+                    "Mara и Sela увидят риск потратить свет на тишину.",
+                    "Lysa / Nyra",
+                    new[] { "Mara", "Dr. Sela" },
+                    PowerChoice.RelayStation),
+                EnsurePowerSystemAsset(
+                    "SO_Power_PartyReserve",
+                    "party_reserve",
+                    "Party Reserve",
+                    "Часть стабильной мощности уходит в переносные ячейки отряда.",
+                    20,
+                    "Отряд получает заряд на будущую угрозу и больше свободы за пределами Riverside.",
+                    "Riverside видит, что внешний отряд забрал свет себе. Cormac не сможет назвать это чистым решением.",
+                    "Dax / Nyra",
+                    new[] { "почти все местные", "Cormac" },
+                    PowerChoice.PartyReserve),
+                EnsurePowerSystemAsset(
+                    "SO_Power_SplitLoad",
+                    "split_load",
+                    "Split Load",
+                    "Осторожная компромиссная схема без полного питания одной системы.",
+                    100,
+                    "Никто не получает победу, но Riverside видит попытку удержать поселение целым.",
+                    "Каждая группа получает меньше, чем просила, и ни одна проблема не решена полностью.",
+                    "Mara",
+                    new[] { "все недовольны частично" },
+                    PowerChoice.SplitLoad)
+            };
+        }
+
+        private static PowerSystemData EnsurePowerSystemAsset(
+            string assetName,
+            string id,
+            string displayName,
+            string description,
+            int requiredPower,
+            string benefitDescription,
+            string downsideDescription,
+            string supportingNpcId,
+            string[] opposingNpcIds,
+            PowerChoice powerChoice)
+        {
+            var path = $"{PowerSystemDataPath}/{assetName}.asset";
+            var powerSystemData = AssetDatabase.LoadAssetAtPath<PowerSystemData>(path);
+
+            if (powerSystemData == null)
+            {
+                powerSystemData = ScriptableObject.CreateInstance<PowerSystemData>();
+                AssetDatabase.CreateAsset(powerSystemData, path);
+            }
+
+            powerSystemData.Id = id;
+            powerSystemData.DisplayName = displayName;
+            powerSystemData.Description = description;
+            powerSystemData.RequiredPower = requiredPower;
+            powerSystemData.BenefitDescription = benefitDescription;
+            powerSystemData.DownsideDescription = downsideDescription;
+            powerSystemData.SupportingNPCId = supportingNpcId;
+            powerSystemData.OpposingNPCIds.Clear();
+            powerSystemData.OpposingNPCIds.AddRange(opposingNpcIds);
+            powerSystemData.PowerChoice = powerChoice;
+            EditorUtility.SetDirty(powerSystemData);
+            return powerSystemData;
         }
 
         private static QuestData EnsureQuestDataAsset()

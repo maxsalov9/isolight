@@ -34,7 +34,7 @@ namespace IsoLight.Input
 
         private void Update()
         {
-            if (gameManager == null || gameManager.CurrentGameMode != GameMode.Exploration || partyManager == null)
+            if (gameManager == null || !CanSelectPartyMember() || partyManager == null)
             {
                 return;
             }
@@ -73,6 +73,12 @@ namespace IsoLight.Input
             return UnityEngine.Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + index))
                 || UnityEngine.Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + index));
 #endif
+        }
+
+        private bool CanSelectPartyMember()
+        {
+            return gameManager.CurrentGameMode == GameMode.Exploration
+                || gameManager.CurrentGameMode == GameMode.Combat;
         }
     }
 }

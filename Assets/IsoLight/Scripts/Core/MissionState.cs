@@ -29,6 +29,8 @@ namespace IsoLight.Core
         public bool GeneratorDefended;
 
         public PowerChoice FinalPowerChoice;
+        public int PartyPowerCellsCharge;
+        public bool PartySelfishnessSeen;
         public bool MissionCompleted;
     }
 }

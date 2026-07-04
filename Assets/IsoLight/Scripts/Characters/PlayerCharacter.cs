@@ -1,19 +1,24 @@
 using System;
+using IsoLight.Combat;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace IsoLight.Characters
 {
     [RequireComponent(typeof(NavMeshAgent))]
-    public class PlayerCharacter : MonoBehaviour
+    public class PlayerCharacter : MonoBehaviour, IDamageable
     {
         [SerializeField] private CharacterData characterData;
         [SerializeField] private GameObject selectionIndicator;
         [SerializeField] private int currentHealth;
         [SerializeField] private int currentEnergy;
         [SerializeField] private bool isSelected;
+        [SerializeField] private int attackDamage = 16;
+        [SerializeField] private float attackRange = 6f;
+        [SerializeField] private float attackCooldown = 0.75f;
 
         private NavMeshAgent navMeshAgent;
+        private float nextAttackTime;
 
         public event Action<PlayerCharacter> StatsChanged;
         public event Action<PlayerCharacter, bool> SelectionChanged;
@@ -21,8 +26,10 @@ namespace IsoLight.Characters
         public CharacterData CharacterData => characterData;
         public string CharacterId => characterData != null ? characterData.Id : name;
         public string DisplayName => characterData != null ? characterData.DisplayName : name;
+        public int MaxHealth => characterData != null ? characterData.MaxHealth : 1;
         public int CurrentHealth => currentHealth;
         public int CurrentEnergy => currentEnergy;
+        public bool IsAlive => currentHealth > 0;
         public bool IsSelected => isSelected;
 
         private void Awake()
@@ -78,12 +85,41 @@ namespace IsoLight.Characters
 
         public void MoveTo(Vector3 destination)
         {
-            if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+            if (!IsAlive || navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
             {
                 return;
             }
 
             navMeshAgent.SetDestination(destination);
+        }
+
+        public bool TryAttack(IDamageable target)
+        {
+            if (!IsAlive || target == null || !target.IsAlive || Time.time < nextAttackTime)
+            {
+                return false;
+            }
+
+            if (target is not Component targetComponent)
+            {
+                return false;
+            }
+
+            var distance = Vector3.Distance(transform.position, targetComponent.transform.position);
+            if (distance > attackRange)
+            {
+                MoveTo(targetComponent.transform.position);
+                return false;
+            }
+
+            if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.ResetPath();
+            }
+
+            target.TakeDamage(attackDamage);
+            nextAttackTime = Time.time + attackCooldown;
+            return true;
         }
 
         public void TakeDamage(int amount)
@@ -94,6 +130,11 @@ namespace IsoLight.Characters
             }
 
             currentHealth = Mathf.Max(0, currentHealth - amount);
+            if (currentHealth <= 0 && navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.ResetPath();
+            }
+
             StatsChanged?.Invoke(this);
         }
 

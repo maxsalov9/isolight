@@ -1,5 +1,6 @@
 using IsoLight.Characters;
 using IsoLight.Core;
+using IsoLight.Power;
 using IsoLight.Quests;
 using IsoLight.UI;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace IsoLight.Interaction
 
         [SerializeField] private GameManager gameManager;
         [SerializeField] private QuestManager questManager;
+        [SerializeField] private PowerManager powerManager;
         [SerializeField] private NotificationUI notificationUI;
 
         protected override void Awake()
@@ -43,10 +45,26 @@ namespace IsoLight.Interaction
             }
 
             questManager?.ActivateObjective(AllocatePowerObjectiveId);
+            powerManager?.OpenPowerAllocationBoard();
+        }
 
-            const string unlockedMessage = "Power Allocation Board will be implemented in Batch 6.";
-            Debug.Log(unlockedMessage);
-            notificationUI?.ShowMessage(unlockedMessage);
+        public void SetReferences(GameManager game, QuestManager quest, PowerManager power, NotificationUI notifications)
+        {
+            gameManager = game;
+            questManager = quest;
+            powerManager = power;
+            notificationUI = notifications;
+        }
+
+        [ContextMenu("Debug Mark Generator Defended")]
+        public void DebugMarkGeneratorDefended()
+        {
+            CacheReferences();
+            if (gameManager != null)
+            {
+                gameManager.MissionState.GeneratorDefended = true;
+                Debug.Log("Debug: Generator G-17 marked as defended from SwitchRoomConsole.");
+            }
         }
 
         private void CacheReferences()
@@ -59,6 +77,11 @@ namespace IsoLight.Interaction
             if (questManager == null)
             {
                 questManager = FindAnyObjectByType<QuestManager>();
+            }
+
+            if (powerManager == null)
+            {
+                powerManager = FindAnyObjectByType<PowerManager>();
             }
 
             if (notificationUI == null)

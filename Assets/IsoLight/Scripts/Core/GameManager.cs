@@ -46,5 +46,12 @@ namespace IsoLight.Core
         public RelationshipManager RelationshipManager => relationshipManager;
         public SaveManager SaveManager => saveManager;
         public UIManager UIManager => uiManager;
+
+        [ContextMenu("Debug Mark Generator Defended")]
+        public void DebugMarkGeneratorDefended()
+        {
+            missionState.GeneratorDefended = true;
+            Debug.Log("Debug: Generator G-17 marked as defended.");
+        }
     }
 }
