@@ -130,18 +130,24 @@ namespace IsoLight.Editor
         {
             return new MinimalMaterials
             {
-                WetAsphaltDark = EnsureMaterialAsset("MAT_WetAsphalt_Dark", new Color(0.03f, 0.045f, 0.06f)),
-                ColdConcrete = EnsureMaterialAsset("MAT_ColdConcrete", new Color(0.38f, 0.42f, 0.45f)),
-                RustMetal = EnsureMaterialAsset("MAT_RustMetal", new Color(0.38f, 0.2f, 0.12f)),
-                DirtyPlastic = EnsureMaterialAsset("MAT_DirtyPlastic", new Color(0.68f, 0.66f, 0.58f)),
-                DeadVegetation = EnsureMaterialAsset("MAT_DeadVegetation", new Color(0.24f, 0.35f, 0.22f)),
-                WarmLightSource = EnsureMaterialAsset("MAT_WarmLightSource", new Color(1f, 0.72f, 0.24f), true),
-                TechBlue = EnsureMaterialAsset("MAT_TechBlue", new Color(0.18f, 0.65f, 1f), true),
-                DangerRed = EnsureMaterialAsset("MAT_DangerRed", new Color(0.65f, 0.08f, 0.06f), true)
+                WetAsphaltDark = EnsureMaterialAsset("MAT_WetAsphalt_Dark", new Color(0.025f, 0.032f, 0.04f), false, 0f, 0.58f),
+                ColdConcrete = EnsureMaterialAsset("MAT_ColdConcrete", new Color(0.31f, 0.34f, 0.35f), false, 0f, 0.22f),
+                RustMetal = EnsureMaterialAsset("MAT_RustMetal", new Color(0.29f, 0.15f, 0.08f), false, 0.38f, 0.18f),
+                DirtyPlastic = EnsureMaterialAsset("MAT_DirtyPlastic", new Color(0.5f, 0.49f, 0.43f), false, 0f, 0.34f),
+                DeadVegetation = EnsureMaterialAsset("MAT_DeadVegetation", new Color(0.16f, 0.24f, 0.15f), false, 0f, 0.12f),
+                WarmLightSource = EnsureMaterialAsset("MAT_WarmLightSource", new Color(1f, 0.58f, 0.18f), true, 0f, 0.42f, 1.8f),
+                TechBlue = EnsureMaterialAsset("MAT_TechBlue", new Color(0.1f, 0.48f, 0.82f), true, 0f, 0.46f, 1.6f),
+                DangerRed = EnsureMaterialAsset("MAT_DangerRed", new Color(0.55f, 0.04f, 0.03f), true, 0f, 0.36f, 1.25f)
             };
         }
 
-        private static Material EnsureMaterialAsset(string materialName, Color color, bool emissive = false)
+        private static Material EnsureMaterialAsset(
+            string materialName,
+            Color color,
+            bool emissive = false,
+            float metallic = 0f,
+            float smoothness = 0.25f,
+            float emissionIntensity = 1f)
         {
             var path = $"{MaterialsPath}/{materialName}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -153,20 +159,46 @@ namespace IsoLight.Editor
 
             material.name = materialName;
             material.color = color;
+            SetMaterialColor(material, color);
+            SetMaterialFloat(material, "_Metallic", metallic);
+            SetMaterialFloat(material, "_Smoothness", smoothness);
+            SetMaterialFloat(material, "_Glossiness", smoothness);
 
             if (emissive)
             {
                 material.EnableKeyword("_EMISSION");
-                material.SetColor("_EmissionColor", color * 1.25f);
+                SetMaterialColor(material, color * emissionIntensity, "_EmissionColor");
             }
             else
             {
                 material.DisableKeyword("_EMISSION");
-                material.SetColor("_EmissionColor", Color.black);
+                SetMaterialColor(material, Color.black, "_EmissionColor");
             }
 
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        private static void SetMaterialColor(Material material, Color color, string propertyName = "_BaseColor")
+        {
+            if (material.HasProperty(propertyName))
+            {
+                material.SetColor(propertyName, color);
+                return;
+            }
+
+            if (propertyName == "_BaseColor" && material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", color);
+            }
+        }
+
+        private static void SetMaterialFloat(Material material, string propertyName, float value)
+        {
+            if (material.HasProperty(propertyName))
+            {
+                material.SetFloat(propertyName, value);
+            }
         }
 
         private static Shader GetPrototypeShader()
@@ -230,7 +262,10 @@ namespace IsoLight.Editor
             CreatePath(blockoutRoot.transform, "Cross Route East", new Vector3(5f, 0.06f, 4f), new Vector3(11f, 0.04f, 2.5f), materials.WetAsphaltDark);
             CreatePath(blockoutRoot.transform, "Cross Route West", new Vector3(-5f, 0.06f, 8f), new Vector3(12f, 0.04f, 2.5f), materials.WetAsphaltDark);
 
+            CreateRiversideInfrastructure(blockoutRoot.transform, materials);
             CreateColdRuins(blockoutRoot.transform, materials);
+            CreateArrivalStreetProps(blockoutRoot.transform, materials);
+            CreateLocalShelterProps(blockoutRoot.transform, materials);
             CreateFilterStationProps(blockoutRoot.transform, materials);
             CreateHydroponicFarmProps(blockoutRoot.transform, materials);
             CreateDefenseGateProps(blockoutRoot.transform, materials);
@@ -238,6 +273,8 @@ namespace IsoLight.Editor
             CreateWorkshopProps(blockoutRoot.transform, materials);
             CreateRelayStationProps(blockoutRoot.transform, materials);
             CreateGeneratorYardProps(blockoutRoot.transform, materials);
+            CreateSwitchRoomProps(blockoutRoot.transform, materials);
+            CreateRiversideWearAndWater(blockoutRoot.transform, materials);
         }
 
         private static void CreateZoneBase(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
@@ -250,6 +287,29 @@ namespace IsoLight.Editor
             CreateCube(parent, $"Path_{name}", position, scale, material, false);
         }
 
+        private static void CreateRiversideInfrastructure(Transform parent, MinimalMaterials materials)
+        {
+            CreateCube(parent, "Arrival_Raised_Curb_West", new Vector3(-2.7f, 0.16f, -14f), new Vector3(0.18f, 0.18f, 5.2f), materials.ColdConcrete, false);
+            CreateCube(parent, "Arrival_Raised_Curb_East", new Vector3(2.7f, 0.16f, -14f), new Vector3(0.18f, 0.18f, 5.2f), materials.ColdConcrete, false);
+            CreateCube(parent, "MainRoute_Curb_West", new Vector3(-1.75f, 0.17f, -4.2f), new Vector3(0.16f, 0.18f, 18.6f), materials.ColdConcrete, false);
+            CreateCube(parent, "MainRoute_Curb_East", new Vector3(1.75f, 0.17f, -4.2f), new Vector3(0.16f, 0.18f, 18.6f), materials.ColdConcrete, false);
+            CreateCube(parent, "CrossRoute_East_NorthCurb", new Vector3(5f, 0.17f, 5.35f), new Vector3(10.8f, 0.18f, 0.16f), materials.ColdConcrete, false);
+            CreateCube(parent, "CrossRoute_East_SouthCurb", new Vector3(5f, 0.17f, 2.65f), new Vector3(10.8f, 0.18f, 0.16f), materials.ColdConcrete, false);
+            CreateCube(parent, "CrossRoute_West_NorthCurb", new Vector3(-5f, 0.17f, 9.35f), new Vector3(11.8f, 0.18f, 0.16f), materials.ColdConcrete, false);
+            CreateCube(parent, "CrossRoute_West_SouthCurb", new Vector3(-5f, 0.17f, 6.65f), new Vector3(11.8f, 0.18f, 0.16f), materials.ColdConcrete, false);
+
+            CreateCube(parent, "Shelter_Raised_Floor", new Vector3(0f, 0.16f, -6f), new Vector3(10f, 0.22f, 3.6f), materials.ColdConcrete, false);
+            CreateCube(parent, "Shelter_Step_Front", new Vector3(0f, 0.18f, -3.7f), new Vector3(6.2f, 0.18f, 0.55f), materials.ColdConcrete, false);
+            CreateCube(parent, "Generator_Service_Platform", new Vector3(0f, 0.18f, 3f), new Vector3(5.2f, 0.24f, 2.8f), materials.ColdConcrete, false);
+            CreateCube(parent, "SwitchRoom_Raised_Threshold", new Vector3(0f, 0.18f, -10f), new Vector3(4.4f, 0.24f, 2.2f), materials.ColdConcrete, false);
+
+            CreateCube(parent, "Alley_Broken_Wall_Northwest", new Vector3(-12.8f, 1.15f, 11f), new Vector3(4f, 2.3f, 0.35f), materials.ColdConcrete, false);
+            CreateCube(parent, "Alley_Broken_Wall_West", new Vector3(-12.8f, 1.05f, 5.1f), new Vector3(0.35f, 2.1f, 4.2f), materials.ColdConcrete, false);
+            CreateCube(parent, "Stage_Back_RetainingWall", new Vector3(8f, 1f, -4.8f), new Vector3(5.8f, 2f, 0.32f), materials.ColdConcrete, false);
+            CreateCube(parent, "Workshop_Back_Wall", new Vector3(11.8f, 1.2f, 5f), new Vector3(0.35f, 2.4f, 4.8f), materials.ColdConcrete, false);
+            CreateCube(parent, "Relay_Service_Wall", new Vector3(0f, 1f, 17.4f), new Vector3(5.6f, 2f, 0.3f), materials.ColdConcrete, false);
+        }
+
         private static void CreateColdRuins(Transform parent, MinimalMaterials materials)
         {
             CreateCube(parent, "Shelter_BackWall", new Vector3(0f, 1.6f, -8.7f), new Vector3(14f, 3.2f, 0.45f), materials.ColdConcrete, false);
@@ -257,6 +317,34 @@ namespace IsoLight.Editor
             CreateCube(parent, "Broken_Block_West", new Vector3(-15f, 1.2f, 0f), new Vector3(1.2f, 2.4f, 12f), materials.ColdConcrete, false);
             CreateCube(parent, "Broken_Block_East", new Vector3(15f, 1.2f, 2f), new Vector3(1.2f, 2.4f, 12f), materials.ColdConcrete, false);
             CreateCube(parent, "WaterWarning_Sign", new Vector3(-2.8f, 1.3f, -13.2f), new Vector3(1.8f, 1.1f, 0.12f), materials.DangerRed, false);
+            CreateCube(parent, "Collapsed_Slab_West_A", new Vector3(-6.3f, 0.28f, -1.5f), new Vector3(2.6f, 0.25f, 0.8f), materials.ColdConcrete, false);
+            CreateCube(parent, "Collapsed_Slab_West_B", new Vector3(-7f, 0.45f, 0.4f), new Vector3(1.8f, 0.35f, 1.1f), materials.ColdConcrete, false);
+            CreateCube(parent, "Cold_Service_Pipe", new Vector3(-1.4f, 1.05f, -8.45f), new Vector3(3.4f, 0.16f, 0.16f), materials.RustMetal, false);
+        }
+
+        private static void CreateArrivalStreetProps(Transform parent, MinimalMaterials materials)
+        {
+            CreateCube(parent, "Arrival_Road_LaneMark_A", new Vector3(0f, 0.095f, -15.6f), new Vector3(0.18f, 0.03f, 1.1f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Arrival_Road_LaneMark_B", new Vector3(0f, 0.095f, -13.6f), new Vector3(0.18f, 0.03f, 1.1f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Arrival_Road_LaneMark_C", new Vector3(0f, 0.095f, -11.6f), new Vector3(0.18f, 0.03f, 1.1f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Arrival_Barricade_Left_Base", new Vector3(-3.6f, 0.35f, -12.1f), new Vector3(1.6f, 0.7f, 0.35f), materials.ColdConcrete, false);
+            CreateCube(parent, "Arrival_Barricade_Left_Warning", new Vector3(-3.6f, 0.85f, -12.1f), new Vector3(1.5f, 0.18f, 0.18f), materials.DangerRed, false);
+            CreateCube(parent, "Arrival_Barricade_Right_Base", new Vector3(3.6f, 0.35f, -15.7f), new Vector3(1.6f, 0.7f, 0.35f), materials.ColdConcrete, false);
+            CreateCube(parent, "Arrival_Barricade_Right_Warning", new Vector3(3.6f, 0.85f, -15.7f), new Vector3(1.5f, 0.18f, 0.18f), materials.DangerRed, false);
+            CreateCylinder(parent, "Arrival_Old_Barrel_A", new Vector3(-4.3f, 0.45f, -15f), new Vector3(0.45f, 0.9f, 0.45f), materials.RustMetal, false);
+            CreateCylinder(parent, "Arrival_Old_Barrel_B", new Vector3(4.1f, 0.45f, -12.2f), new Vector3(0.42f, 0.85f, 0.42f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Arrival_Tech_Cabinet", new Vector3(2.7f, 0.75f, -11.3f), new Vector3(0.7f, 1.5f, 0.5f), materials.ColdConcrete, false);
+        }
+
+        private static void CreateLocalShelterProps(Transform parent, MinimalMaterials materials)
+        {
+            CreateCube(parent, "Shelter_Cot_A", new Vector3(-4.4f, 0.34f, -6.6f), new Vector3(1.8f, 0.28f, 0.75f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Shelter_Cot_B", new Vector3(-4.4f, 0.34f, -5.2f), new Vector3(1.8f, 0.28f, 0.75f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Shelter_Supply_Crate_A", new Vector3(4.8f, 0.45f, -7.1f), new Vector3(0.9f, 0.9f, 0.9f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Shelter_Supply_Crate_B", new Vector3(5.7f, 0.35f, -7.1f), new Vector3(0.7f, 0.7f, 0.7f), materials.RustMetal, false);
+            CreateCube(parent, "Shelter_Notice_Board", new Vector3(2.8f, 1.25f, -8.35f), new Vector3(1.7f, 1.1f, 0.12f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Shelter_Warm_Lantern", new Vector3(-1.2f, 1.55f, -7.9f), new Vector3(0.25f, 0.35f, 0.25f), materials.WarmLightSource, false);
+            CreateCableRun(parent, "Shelter_Hanging_Cable", new Vector3(-0.2f, 2f, -8.25f), 3.4f, materials.RustMetal);
         }
 
         private static void CreateFilterStationProps(Transform parent, MinimalMaterials materials)
@@ -267,6 +355,11 @@ namespace IsoLight.Editor
             CreateCube(parent, "Filter_Pipe_Long", new Vector3(-10.4f, 1.15f, 7f), new Vector3(3.3f, 0.18f, 0.18f), materials.RustMetal, false);
             CreateCylinder(parent, "Filter_Canister_A", new Vector3(-11.6f, 0.35f, 6.8f), new Vector3(0.35f, 0.7f, 0.35f), materials.DirtyPlastic, false);
             CreateCylinder(parent, "Filter_Canister_B", new Vector3(-8.7f, 0.35f, 6.8f), new Vector3(0.35f, 0.7f, 0.35f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Filter_Drain_Channel", new Vector3(-10.4f, 0.12f, 6.45f), new Vector3(3.8f, 0.06f, 0.35f), materials.WetAsphaltDark, false);
+            CreateCube(parent, "Filter_DoNotDrink_Sign", new Vector3(-12.15f, 1.15f, 7.1f), new Vector3(0.12f, 0.85f, 1.6f), materials.DangerRed, false);
+            CreateCylinder(parent, "Filter_Bucket_A", new Vector3(-12.1f, 0.28f, 9.6f), new Vector3(0.28f, 0.55f, 0.28f), materials.RustMetal, false);
+            CreateCylinder(parent, "Filter_Bucket_B", new Vector3(-8.1f, 0.28f, 9.7f), new Vector3(0.28f, 0.55f, 0.28f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Filter_Service_Panel", new Vector3(-8.5f, 1.15f, 9.25f), new Vector3(1.1f, 0.75f, 0.16f), materials.ColdConcrete, false);
         }
 
         private static void CreateHydroponicFarmProps(Transform parent, MinimalMaterials materials)
@@ -281,6 +374,11 @@ namespace IsoLight.Editor
 
             CreateCylinder(parent, "Farm_NutrientTank", new Vector3(-1.7f, 0.55f, 8.2f), new Vector3(0.6f, 1.1f, 0.6f), materials.DirtyPlastic, false);
             CreateCube(parent, "Farm_DeadTray", new Vector3(-6.2f, 0.32f, 9.7f), new Vector3(1.5f, 0.16f, 0.8f), materials.RustMetal, false);
+            CreateCube(parent, "Farm_Pump_Block", new Vector3(-2f, 0.42f, 6.5f), new Vector3(0.9f, 0.8f, 0.65f), materials.RustMetal, false);
+            CreateCube(parent, "Farm_Irrigation_Line_A", new Vector3(-4.2f, 1.18f, 6.4f), new Vector3(3.8f, 0.08f, 0.1f), materials.TechBlue, false);
+            CreateCube(parent, "Farm_Irrigation_Line_B", new Vector3(-4.2f, 1.18f, 10f), new Vector3(3.8f, 0.08f, 0.1f), materials.TechBlue, false);
+            CreateCube(parent, "Farm_Empty_Tray_A", new Vector3(-6.15f, 0.25f, 7.7f), new Vector3(1.35f, 0.12f, 0.65f), materials.ColdConcrete, false);
+            CreateCube(parent, "Farm_Greenhouse_Frame_Back", new Vector3(-4.2f, 1.55f, 10.55f), new Vector3(4.4f, 1.9f, 0.16f), materials.RustMetal, false);
         }
 
         private static void CreateDefenseGateProps(Transform parent, MinimalMaterials materials)
@@ -293,6 +391,13 @@ namespace IsoLight.Editor
             CreateFence(parent, materials, 4.6f);
             CreateCube(parent, "Defense_Barricade_A", new Vector3(0.3f, 0.45f, 8.4f), new Vector3(1.4f, 0.9f, 0.55f), materials.ColdConcrete, false);
             CreateCube(parent, "Defense_Barricade_B", new Vector3(3.7f, 0.45f, 8.4f), new Vector3(1.4f, 0.9f, 0.55f), materials.ColdConcrete, false);
+            CreateCube(parent, "Defense_Sandbag_Line_A", new Vector3(1.2f, 0.32f, 7.35f), new Vector3(1.6f, 0.42f, 0.4f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Defense_Sandbag_Line_B", new Vector3(2.8f, 0.32f, 7.35f), new Vector3(1.6f, 0.42f, 0.4f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Defense_Warning_FloorStripe_A", new Vector3(1.05f, 0.1f, 10.65f), new Vector3(0.9f, 0.03f, 0.18f), materials.DangerRed, false);
+            CreateCube(parent, "Defense_Warning_FloorStripe_B", new Vector3(2f, 0.1f, 10.65f), new Vector3(0.9f, 0.03f, 0.18f), materials.WarmLightSource, false);
+            CreateCube(parent, "Defense_Warning_FloorStripe_C", new Vector3(2.95f, 0.1f, 10.65f), new Vector3(0.9f, 0.03f, 0.18f), materials.DangerRed, false);
+            CreateCube(parent, "Defense_Searchlight_Left_Housing", new Vector3(0.6f, 2.55f, 10.9f), new Vector3(0.55f, 0.42f, 0.65f), materials.WarmLightSource, false);
+            CreateCube(parent, "Defense_Searchlight_Right_Housing", new Vector3(3.4f, 2.55f, 10.9f), new Vector3(0.55f, 0.42f, 0.65f), materials.WarmLightSource, false);
         }
 
         private static void CreateFence(Transform parent, MinimalMaterials materials, float x)
@@ -301,6 +406,9 @@ namespace IsoLight.Editor
             {
                 CreateCube(parent, $"Defense_Fence_{x}_{i}", new Vector3(x, 0.65f, 7.2f + i * 1.2f), new Vector3(0.1f, 1.3f, 0.1f), materials.RustMetal, false);
             }
+
+            CreateCube(parent, $"Defense_Fence_TopRail_{x}", new Vector3(x, 1.25f, 9f), new Vector3(0.08f, 0.08f, 4.2f), materials.RustMetal, false);
+            CreateCube(parent, $"Defense_Fence_LowRail_{x}", new Vector3(x, 0.65f, 9f), new Vector3(0.08f, 0.08f, 4.2f), materials.RustMetal, false);
         }
 
         private static void CreatePublicStageProps(Transform parent, MinimalMaterials materials)
@@ -311,6 +419,11 @@ namespace IsoLight.Editor
             CreateCube(parent, "Stage_Spotlight_Warm", new Vector3(6f, 1.6f, -4.1f), new Vector3(0.5f, 0.5f, 0.7f), materials.WarmLightSource, false);
             CreateCube(parent, "Stage_Bench_A", new Vector3(6.8f, 0.35f, 0.7f), new Vector3(2.2f, 0.25f, 0.45f), materials.ColdConcrete, false);
             CreateCube(parent, "Stage_Bench_B", new Vector3(9.2f, 0.35f, 0.7f), new Vector3(2.2f, 0.25f, 0.45f), materials.ColdConcrete, false);
+            CreateCube(parent, "Stage_Bench_A_Legs", new Vector3(6.8f, 0.18f, 0.7f), new Vector3(2f, 0.25f, 0.12f), materials.RustMetal, false);
+            CreateCube(parent, "Stage_Bench_B_Legs", new Vector3(9.2f, 0.18f, 0.7f), new Vector3(2f, 0.25f, 0.12f), materials.RustMetal, false);
+            CreateCube(parent, "Stage_Notice_Board", new Vector3(10.5f, 1.2f, -3.3f), new Vector3(0.16f, 1.2f, 1.8f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Stage_Broken_Step", new Vector3(8f, 0.16f, -0.75f), new Vector3(3.2f, 0.22f, 0.42f), materials.ColdConcrete, false);
+            CreateCube(parent, "Stage_Warm_Cable", new Vector3(7.1f, 0.09f, -3.55f), new Vector3(2.2f, 0.07f, 0.12f), materials.RustMetal, false);
         }
 
         private static void CreateWorkshopProps(Transform parent, MinimalMaterials materials)
@@ -321,6 +434,12 @@ namespace IsoLight.Editor
             CreateCube(parent, "Workshop_Crate_B", new Vector3(7.9f, 0.4f, 6.4f), new Vector3(0.8f, 0.8f, 0.8f), materials.RustMetal, false);
             CreateCube(parent, "Workshop_ChargeRack", new Vector3(10.6f, 0.9f, 3.4f), new Vector3(0.7f, 1.8f, 0.5f), materials.WarmLightSource, false);
             CreateCube(parent, "Workshop_CableRun", new Vector3(9f, 0.08f, 3.5f), new Vector3(3.5f, 0.08f, 0.18f), materials.TechBlue, false);
+            CreateCube(parent, "Workshop_Tool_A", new Vector3(11.02f, 1.55f, 4.2f), new Vector3(0.08f, 0.9f, 0.12f), materials.RustMetal, false);
+            CreateCube(parent, "Workshop_Tool_B", new Vector3(11.02f, 1.25f, 5.1f), new Vector3(0.08f, 0.65f, 0.12f), materials.WarmLightSource, false);
+            CreateCube(parent, "Workshop_TechCabinet_A", new Vector3(10.7f, 0.9f, 6.7f), new Vector3(0.8f, 1.8f, 0.65f), materials.ColdConcrete, false);
+            CreateCube(parent, "Workshop_Spare_Pipe_A", new Vector3(8.9f, 0.25f, 6.75f), new Vector3(2.7f, 0.12f, 0.12f), materials.RustMetal, false);
+            CreateCylinder(parent, "Workshop_Oil_Drum", new Vector3(6.55f, 0.45f, 4.15f), new Vector3(0.45f, 0.9f, 0.45f), materials.RustMetal, false);
+            CreateCableRun(parent, "Workshop_CableBundle", new Vector3(8.3f, 0.12f, 3.9f), 2.1f, materials.TechBlue);
         }
 
         private static void CreateRelayStationProps(Transform parent, MinimalMaterials materials)
@@ -330,6 +449,11 @@ namespace IsoLight.Editor
             CreateCube(parent, "Relay_Antenna_Crossbar", new Vector3(1.2f, 3.9f, 15.1f), new Vector3(2f, 0.08f, 0.08f), materials.RustMetal, false);
             CreateCube(parent, "Relay_BlueBeacon", new Vector3(1.2f, 4.4f, 15.1f), new Vector3(0.32f, 0.32f, 0.32f), materials.TechBlue, false);
             CreateCube(parent, "Relay_CableCabinet", new Vector3(2.4f, 0.75f, 14.2f), new Vector3(0.8f, 1.5f, 0.7f), materials.ColdConcrete, false);
+            CreateCube(parent, "Relay_GuyWire_Left", new Vector3(0.3f, 2.1f, 14.2f), new Vector3(0.08f, 3.2f, 0.08f), materials.RustMetal, false);
+            CreateCube(parent, "Relay_GuyWire_Right", new Vector3(2.1f, 2.1f, 14.2f), new Vector3(0.08f, 3.2f, 0.08f), materials.RustMetal, false);
+            CreateCube(parent, "Relay_Radio_Block", new Vector3(-1.95f, 0.35f, 15.4f), new Vector3(0.7f, 0.7f, 0.5f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Relay_Network_Sign", new Vector3(-2.55f, 1.15f, 14.1f), new Vector3(0.12f, 0.9f, 1.4f), materials.TechBlue, false);
+            CreateCableRun(parent, "Relay_Ground_Cable", new Vector3(0.2f, 0.09f, 14.15f), 2.8f, materials.TechBlue);
         }
 
         private static void CreateGeneratorYardProps(Transform parent, MinimalMaterials materials)
@@ -343,6 +467,46 @@ namespace IsoLight.Editor
             CreateCube(parent, "Generator_Cover_A", new Vector3(-3.8f, 0.55f, 1.3f), new Vector3(1.4f, 1.1f, 0.7f), materials.ColdConcrete, false);
             CreateCube(parent, "Generator_Cover_B", new Vector3(3.8f, 0.55f, 1.3f), new Vector3(1.4f, 1.1f, 0.7f), materials.ColdConcrete, false);
             CreateCube(parent, "Generator_BatteryBlocks", new Vector3(0f, 0.5f, 5f), new Vector3(2.4f, 1f, 0.7f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Generator_Service_Panel_Left", new Vector3(-1.15f, 1.15f, 2.12f), new Vector3(0.55f, 0.75f, 0.16f), materials.TechBlue, false);
+            CreateCube(parent, "Generator_Service_Panel_Right", new Vector3(1.15f, 1.15f, 2.12f), new Vector3(0.55f, 0.75f, 0.16f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Generator_Cable_Block_A", new Vector3(-2.75f, 0.25f, 4.6f), new Vector3(0.7f, 0.45f, 0.55f), materials.RustMetal, false);
+            CreateCube(parent, "Generator_Cable_Block_B", new Vector3(2.75f, 0.25f, 4.6f), new Vector3(0.7f, 0.45f, 0.55f), materials.RustMetal, false);
+            CreateCube(parent, "Generator_Warning_Stripe_A", new Vector3(-1f, 0.32f, 1.5f), new Vector3(0.9f, 0.05f, 0.18f), materials.DangerRed, false);
+            CreateCube(parent, "Generator_Warning_Stripe_B", new Vector3(0f, 0.32f, 1.5f), new Vector3(0.9f, 0.05f, 0.18f), materials.WarmLightSource, false);
+            CreateCube(parent, "Generator_Warning_Stripe_C", new Vector3(1f, 0.32f, 1.5f), new Vector3(0.9f, 0.05f, 0.18f), materials.DangerRed, false);
+        }
+
+        private static void CreateSwitchRoomProps(Transform parent, MinimalMaterials materials)
+        {
+            CreateCube(parent, "SwitchRoom_BackWall", new Vector3(0f, 1.35f, -11.55f), new Vector3(5.6f, 2.7f, 0.35f), materials.ColdConcrete, false);
+            CreateCube(parent, "SwitchRoom_LeftWall", new Vector3(-2.95f, 1.15f, -10f), new Vector3(0.32f, 2.3f, 2.8f), materials.ColdConcrete, false);
+            CreateCube(parent, "SwitchRoom_RightWall", new Vector3(2.95f, 1.15f, -10f), new Vector3(0.32f, 2.3f, 2.8f), materials.ColdConcrete, false);
+            CreateCube(parent, "SwitchRoom_BreakerRack_Left", new Vector3(-1.8f, 0.95f, -11.15f), new Vector3(0.85f, 1.55f, 0.35f), materials.RustMetal, false);
+            CreateCube(parent, "SwitchRoom_BreakerRack_Right", new Vector3(1.8f, 0.95f, -11.15f), new Vector3(0.85f, 1.55f, 0.35f), materials.RustMetal, false);
+            CreateCube(parent, "SwitchRoom_Blue_Status_Lamp", new Vector3(0f, 1.8f, -11.22f), new Vector3(0.35f, 0.18f, 0.12f), materials.TechBlue, false);
+            CreateCube(parent, "SwitchRoom_Cable_Feed", new Vector3(0f, 0.09f, -8.85f), new Vector3(2.8f, 0.08f, 0.22f), materials.RustMetal, false);
+        }
+
+        private static void CreateRiversideWearAndWater(Transform parent, MinimalMaterials materials)
+        {
+            CreateCube(parent, "Puddle_Arrival_Left", new Vector3(-1.15f, 0.085f, -15.2f), new Vector3(1.1f, 0.025f, 0.65f), materials.TechBlue, false);
+            CreateCube(parent, "Puddle_Shelter_Door", new Vector3(1.4f, 0.095f, -3.5f), new Vector3(1.35f, 0.025f, 0.55f), materials.TechBlue, false);
+            CreateCube(parent, "Puddle_Filter_Runoff", new Vector3(-9.6f, 0.095f, 6.15f), new Vector3(1.45f, 0.025f, 0.5f), materials.TechBlue, false);
+            CreateCube(parent, "Oil_Stain_Workshop", new Vector3(8.2f, 0.095f, 4f), new Vector3(1.25f, 0.025f, 0.55f), materials.WetAsphaltDark, false);
+            CreateCube(parent, "Dirt_Patch_Farm_Edge", new Vector3(-6.1f, 0.1f, 6.35f), new Vector3(1.5f, 0.035f, 0.75f), materials.DeadVegetation, false);
+            CreateCube(parent, "Dirt_Patch_Defense_Edge", new Vector3(4.15f, 0.1f, 6.8f), new Vector3(1.2f, 0.035f, 0.75f), materials.DirtyPlastic, false);
+            CreateCube(parent, "Broken_Road_Slab_A", new Vector3(-0.9f, 0.12f, -8.4f), new Vector3(1.3f, 0.06f, 0.55f), materials.ColdConcrete, false);
+            CreateCube(parent, "Broken_Road_Slab_B", new Vector3(1.25f, 0.12f, 1.1f), new Vector3(1.6f, 0.06f, 0.5f), materials.ColdConcrete, false);
+            CreateCube(parent, "Warning_Strip_Generator_Yard", new Vector3(0f, 0.11f, 0.55f), new Vector3(3.5f, 0.035f, 0.18f), materials.DangerRed, false);
+            CreateCube(parent, "Warning_Strip_Switch_Threshold", new Vector3(0f, 0.12f, -8.55f), new Vector3(3.6f, 0.035f, 0.18f), materials.WarmLightSource, false);
+        }
+
+        private static void CreateCableRun(Transform parent, string name, Vector3 position, float length, Material material)
+        {
+            CreateCube(parent, $"{name}_A", position, new Vector3(length, 0.07f, 0.08f), material, false);
+            CreateCube(parent, $"{name}_B", position + new Vector3(0.15f, 0.02f, 0.18f), new Vector3(length * 0.88f, 0.06f, 0.08f), material, false);
+            CreateCube(parent, $"{name}_Clamp_A", position + new Vector3(-length * 0.35f, 0.05f, 0.09f), new Vector3(0.16f, 0.12f, 0.34f), material, false);
+            CreateCube(parent, $"{name}_Clamp_B", position + new Vector3(length * 0.35f, 0.05f, 0.09f), new Vector3(0.16f, 0.12f, 0.34f), material, false);
         }
 
         private static GameObject CreateCube(Transform parent, string name, Vector3 position, Vector3 scale, Material material, bool keepCollider)
@@ -381,6 +545,35 @@ namespace IsoLight.Editor
             return sphere;
         }
 
+        private static GameObject CreateChildCube(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)
+        {
+            return CreateChildPrimitive(parent, PrimitiveType.Cube, name, localPosition, localScale, material);
+        }
+
+        private static GameObject CreateChildSphere(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Material material)
+        {
+            return CreateChildPrimitive(parent, PrimitiveType.Sphere, name, localPosition, localScale, material);
+        }
+
+        private static GameObject CreateChildPrimitive(
+            Transform parent,
+            PrimitiveType primitiveType,
+            string name,
+            Vector3 localPosition,
+            Vector3 localScale,
+            Material material)
+        {
+            var primitive = GameObject.CreatePrimitive(primitiveType);
+            primitive.name = name;
+            primitive.transform.SetParent(parent, false);
+            primitive.transform.localPosition = localPosition;
+            primitive.transform.localRotation = Quaternion.identity;
+            primitive.transform.localScale = localScale;
+            AssignMaterial(primitive, material);
+            RemoveColliderIfNeeded(primitive, false);
+            return primitive;
+        }
+
         private static void AssignMaterial(GameObject gameObject, Material material)
         {
             var renderer = gameObject.GetComponent<Renderer>();
@@ -406,25 +599,32 @@ namespace IsoLight.Editor
 
         private static void CreateSceneLighting(MinimalMaterials materials)
         {
-            RenderSettings.ambientLight = new Color(0.08f, 0.11f, 0.14f);
+            RenderSettings.ambientLight = new Color(0.035f, 0.045f, 0.06f);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = new Color(0.045f, 0.06f, 0.07f);
+            RenderSettings.fogDensity = 0.012f;
 
             var sunObject = new GameObject("Cold Evening Directional Light");
             var sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(0.45f, 0.56f, 0.68f);
-            sun.intensity = 0.45f;
+            sun.intensity = 0.28f;
             sunObject.transform.rotation = Quaternion.Euler(55f, -30f, 0f);
 
-            CreatePointLight("Shelter_Warm_Light", new Vector3(0f, 3.4f, -6.2f), new Color(1f, 0.68f, 0.35f), 2.5f, 9f);
-            CreatePointLight("Filter_Cold_Light", new Vector3(-10f, 2.8f, 8f), new Color(0.45f, 0.8f, 1f), 2.2f, 7f);
-            CreatePointLight("Farm_Grow_Light", new Vector3(-4f, 2.6f, 8f), new Color(0.9f, 0.75f, 0.35f), 2.6f, 7f);
-            CreatePointLight("Workshop_Rust_Light", new Vector3(9f, 2.8f, 5f), new Color(1f, 0.45f, 0.2f), 2.4f, 7f);
-            CreatePointLight("Relay_Blue_Light", new Vector3(0f, 3.2f, 15f), new Color(0.25f, 0.65f, 1f), 2.8f, 8f);
-            CreatePointLight("Generator_Warning_Light", new Vector3(0f, 3.2f, 3f), new Color(1f, 0.12f, 0.08f), 1.9f, 7f);
+            CreatePointLight("Arrival_Street_Cold_Glint", new Vector3(0f, 2.5f, -13.4f), new Color(0.32f, 0.55f, 0.72f), 0.9f, 7f);
+            CreatePointLight("Shelter_Warm_Light", new Vector3(0f, 3.4f, -6.2f), new Color(1f, 0.58f, 0.28f), 3.1f, 8f);
+            CreatePointLight("SwitchRoom_Blue_Lock_Light", new Vector3(0f, 2.1f, -10.7f), new Color(0.18f, 0.55f, 1f), 1.5f, 5f);
+            CreatePointLight("Filter_Cold_Light", new Vector3(-10f, 2.8f, 8f), new Color(0.42f, 0.78f, 1f), 2.7f, 7f);
+            CreatePointLight("Farm_Grow_Light", new Vector3(-4f, 2.6f, 8f), new Color(0.95f, 0.72f, 0.3f), 2.9f, 6.5f);
+            CreatePointLight("Workshop_Rust_Light", new Vector3(9f, 2.8f, 5f), new Color(1f, 0.42f, 0.18f), 2.9f, 7f);
+            CreatePointLight("Relay_Blue_Light", new Vector3(0f, 3.2f, 15f), new Color(0.18f, 0.62f, 1f), 3.1f, 8f);
+            CreatePointLight("Generator_Warning_Light", new Vector3(0f, 3.2f, 3f), new Color(1f, 0.12f, 0.08f), 2.2f, 7f);
 
-            CreateSpotLight("Defense_Left_Searchlight", new Vector3(0.5f, 3.4f, 10.5f), Quaternion.Euler(68f, 165f, 0f), new Color(1f, 0.86f, 0.62f), 2.5f, 12f);
-            CreateSpotLight("Defense_Right_Searchlight", new Vector3(3.5f, 3.4f, 10.5f), Quaternion.Euler(68f, 195f, 0f), new Color(1f, 0.86f, 0.62f), 2.5f, 12f);
-            CreateSpotLight("Stage_Old_Spotlight", new Vector3(6.2f, 2.7f, -4f), Quaternion.Euler(62f, 30f, 0f), new Color(1f, 0.7f, 0.35f), 2.2f, 10f);
+            CreateSpotLight("Defense_Left_Searchlight", new Vector3(0.5f, 3.4f, 10.5f), Quaternion.Euler(68f, 165f, 0f), new Color(1f, 0.84f, 0.58f), 3f, 12f);
+            CreateSpotLight("Defense_Right_Searchlight", new Vector3(3.5f, 3.4f, 10.5f), Quaternion.Euler(68f, 195f, 0f), new Color(1f, 0.84f, 0.58f), 3f, 12f);
+            CreateSpotLight("Stage_Old_Spotlight", new Vector3(6.2f, 2.7f, -4f), Quaternion.Euler(62f, 30f, 0f), new Color(1f, 0.64f, 0.28f), 2.5f, 10f);
+            CreateSpotLight("Generator_Service_Lamp", new Vector3(-2.6f, 3.2f, 1.4f), Quaternion.Euler(62f, -25f, 0f), new Color(1f, 0.48f, 0.22f), 1.8f, 8f);
 
             _ = materials;
         }
@@ -546,8 +746,32 @@ namespace IsoLight.Editor
                 ringRenderer.sharedMaterial = materials.WarmLightSource;
             }
 
+            CreateCharacterSilhouetteProps(characterRoot.transform, characterData, materials);
             playerCharacter.SetSelectionIndicator(selectionRing);
             return playerCharacter;
+        }
+
+        private static void CreateCharacterSilhouetteProps(Transform parent, CharacterData characterData, MinimalMaterials materials)
+        {
+            switch (characterData.Id)
+            {
+                case "dax":
+                    CreateChildCube(parent, "Tool_Backpack", new Vector3(0f, 1.2f, -0.48f), new Vector3(0.58f, 0.72f, 0.28f), materials.RustMetal);
+                    CreateChildCube(parent, "Shoulder_Tool", new Vector3(0.43f, 1.35f, 0f), new Vector3(0.18f, 0.9f, 0.18f), materials.WarmLightSource);
+                    CreateChildCube(parent, "Belt_Pouch", new Vector3(-0.38f, 0.75f, 0.1f), new Vector3(0.22f, 0.3f, 0.2f), materials.DirtyPlastic);
+                    break;
+                case "nyra":
+                    CreateChildCube(parent, "Chest_Scanner", new Vector3(0f, 1.22f, 0.48f), new Vector3(0.38f, 0.28f, 0.12f), materials.TechBlue);
+                    CreateChildCube(parent, "Scanner_Antenna", new Vector3(0.32f, 1.8f, -0.1f), new Vector3(0.08f, 0.75f, 0.08f), materials.TechBlue);
+                    CreateChildSphere(parent, "Scanner_Node", new Vector3(0.32f, 2.22f, -0.1f), new Vector3(0.18f, 0.18f, 0.18f), materials.TechBlue);
+                    break;
+                case "cormac":
+                    CreateChildCube(parent, "Medic_Pack", new Vector3(0f, 1.15f, -0.47f), new Vector3(0.55f, 0.62f, 0.25f), materials.DirtyPlastic);
+                    CreateChildCube(parent, "Medic_Cross_Vertical", new Vector3(0f, 1.17f, -0.61f), new Vector3(0.12f, 0.42f, 0.04f), materials.DeadVegetation);
+                    CreateChildCube(parent, "Medic_Cross_Horizontal", new Vector3(0f, 1.17f, -0.62f), new Vector3(0.38f, 0.12f, 0.04f), materials.DeadVegetation);
+                    CreateChildCube(parent, "Side_Medkit", new Vector3(-0.44f, 0.8f, 0f), new Vector3(0.22f, 0.34f, 0.24f), materials.DirtyPlastic);
+                    break;
+            }
         }
 
         private static void CreateQuestInteractables(Transform parent, MinimalMaterials materials)
@@ -664,17 +888,24 @@ namespace IsoLight.Editor
 
         private static void CreatePlaceholderNpcs(Transform parent, Dictionary<string, DialogueData> dialogueAssets, MinimalMaterials materials)
         {
-            CreateNpc(parent, "Mara", "Talk to Mara", dialogueAssets["D01_MARA_INTRO"], new Vector3(0f, 1f, -6f), materials.DirtyPlastic);
-            CreateNpc(parent, "Hale", "Talk to Hale", dialogueAssets["D02_HALE_DEFENSE"], new Vector3(2f, 1f, 7f), materials.DangerRed);
-            CreateNpc(parent, "Ivo", "Talk to Ivo", dialogueAssets["D04_IVO_FARM"], new Vector3(-4.4f, 1f, 6f), materials.DeadVegetation);
-            CreateNpc(parent, "Sela", "Talk to Sela", dialogueAssets["D03_SELA_WATER"], new Vector3(-10f, 1f, 6f), materials.TechBlue);
-            CreateNpc(parent, "Edda", "Talk to Edda", dialogueAssets["D05_EDDA_STAGE"], new Vector3(8f, 1f, -4.2f), materials.WarmLightSource);
-            CreateNpc(parent, "Greer", "Talk to Greer", dialogueAssets["D06_GREER_WORKSHOP"], new Vector3(8f, 1f, 3f), materials.RustMetal);
-            CreateNpc(parent, "Lysa", "Talk to Lysa", dialogueAssets["D07_LYSA_RELAY"], new Vector3(0f, 1f, 13.3f), materials.TechBlue);
-            CreateNpc(parent, "PartyReserveDiscussion", "Discuss Party Reserve", dialogueAssets["D08_PARTY_RESERVE"], new Vector3(2.8f, 1f, -6f), materials.ColdConcrete);
+            CreateNpc(parent, "Mara", "Talk to Mara", dialogueAssets["D01_MARA_INTRO"], new Vector3(0f, 1f, -6f), materials.DirtyPlastic, materials);
+            CreateNpc(parent, "Hale", "Talk to Hale", dialogueAssets["D02_HALE_DEFENSE"], new Vector3(2f, 1f, 7f), materials.DangerRed, materials);
+            CreateNpc(parent, "Ivo", "Talk to Ivo", dialogueAssets["D04_IVO_FARM"], new Vector3(-4.4f, 1f, 6f), materials.DeadVegetation, materials);
+            CreateNpc(parent, "Sela", "Talk to Sela", dialogueAssets["D03_SELA_WATER"], new Vector3(-10f, 1f, 6f), materials.TechBlue, materials);
+            CreateNpc(parent, "Edda", "Talk to Edda", dialogueAssets["D05_EDDA_STAGE"], new Vector3(8f, 1f, -4.2f), materials.WarmLightSource, materials);
+            CreateNpc(parent, "Greer", "Talk to Greer", dialogueAssets["D06_GREER_WORKSHOP"], new Vector3(8f, 1f, 3f), materials.RustMetal, materials);
+            CreateNpc(parent, "Lysa", "Talk to Lysa", dialogueAssets["D07_LYSA_RELAY"], new Vector3(0f, 1f, 13.3f), materials.TechBlue, materials);
+            CreateNpc(parent, "PartyReserveDiscussion", "Discuss Party Reserve", dialogueAssets["D08_PARTY_RESERVE"], new Vector3(2.8f, 1f, -6f), materials.ColdConcrete, materials);
         }
 
-        private static void CreateNpc(Transform parent, string objectName, string prompt, DialogueData dialogueData, Vector3 position, Material material)
+        private static void CreateNpc(
+            Transform parent,
+            string objectName,
+            string prompt,
+            DialogueData dialogueData,
+            Vector3 position,
+            Material material,
+            MinimalMaterials materials)
         {
             var npcObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             npcObject.name = objectName;
@@ -690,6 +921,43 @@ namespace IsoLight.Editor
             var npcDialogue = npcObject.AddComponent<NPCDialogueInteractable>();
             npcDialogue.Configure(prompt, "[Click]", 5f);
             npcDialogue.SetDialogue(dialogueData);
+            CreateNpcRoleProp(npcObject.transform, objectName, materials);
+        }
+
+        private static void CreateNpcRoleProp(Transform parent, string objectName, MinimalMaterials materials)
+        {
+            switch (objectName)
+            {
+                case "Mara":
+                    CreateChildCube(parent, "Leader_Clipboard", new Vector3(0.44f, 1.25f, 0.18f), new Vector3(0.08f, 0.42f, 0.28f), materials.DirtyPlastic);
+                    CreateChildCube(parent, "Neutral_Shoulder_Mark", new Vector3(-0.4f, 1.55f, 0f), new Vector3(0.18f, 0.18f, 0.32f), materials.ColdConcrete);
+                    break;
+                case "Hale":
+                    CreateChildCube(parent, "Defense_Shoulder_Plate", new Vector3(0f, 1.55f, 0.5f), new Vector3(0.72f, 0.18f, 0.14f), materials.DangerRed);
+                    CreateChildCube(parent, "Defense_Radio", new Vector3(-0.42f, 1.15f, 0f), new Vector3(0.16f, 0.38f, 0.18f), materials.RustMetal);
+                    break;
+                case "Ivo":
+                    CreateChildCube(parent, "Farm_Tray", new Vector3(0f, 0.82f, 0.55f), new Vector3(0.72f, 0.12f, 0.28f), materials.DeadVegetation);
+                    break;
+                case "Sela":
+                    CreateChildCube(parent, "Medic_Case", new Vector3(0.46f, 0.9f, 0f), new Vector3(0.22f, 0.36f, 0.28f), materials.DirtyPlastic);
+                    CreateChildCube(parent, "Medic_Case_Mark", new Vector3(0.58f, 0.9f, 0f), new Vector3(0.04f, 0.22f, 0.12f), materials.TechBlue);
+                    break;
+                case "Edda":
+                    CreateChildCube(parent, "Stage_Sash", new Vector3(0f, 1.45f, 0.5f), new Vector3(0.18f, 0.65f, 0.08f), materials.WarmLightSource);
+                    break;
+                case "Greer":
+                    CreateChildCube(parent, "Toolbox", new Vector3(-0.45f, 0.75f, 0f), new Vector3(0.26f, 0.34f, 0.32f), materials.RustMetal);
+                    CreateChildCube(parent, "Toolbox_Light", new Vector3(-0.58f, 0.84f, 0f), new Vector3(0.04f, 0.1f, 0.18f), materials.WarmLightSource);
+                    break;
+                case "Lysa":
+                    CreateChildCube(parent, "Relay_Antenna_Pack", new Vector3(0f, 1.2f, -0.48f), new Vector3(0.38f, 0.5f, 0.2f), materials.TechBlue);
+                    CreateChildCube(parent, "Relay_Antenna_Rod", new Vector3(0.25f, 1.85f, -0.15f), new Vector3(0.06f, 0.8f, 0.06f), materials.TechBlue);
+                    break;
+                case "PartyReserveDiscussion":
+                    CreateChildCube(parent, "Reserve_Cell", new Vector3(0f, 0.75f, 0.55f), new Vector3(0.45f, 0.28f, 0.18f), materials.TechBlue);
+                    break;
+            }
         }
 
         private static CharacterData EnsureCharacterDataAsset(
