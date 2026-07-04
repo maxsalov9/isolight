@@ -53,5 +53,13 @@ namespace IsoLight.Core
             missionState.GeneratorDefended = true;
             Debug.Log("Debug: Generator G-17 marked as defended.");
         }
+
+        [ContextMenu("Debug Reset Mission State")]
+        public void DebugResetMissionState()
+        {
+            missionState = new MissionState();
+            currentGameMode = GameMode.Exploration;
+            Debug.Log("Debug: Mission state reset.");
+        }
     }
 }

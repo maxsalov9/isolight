@@ -8,8 +8,8 @@ namespace IsoLight.Interaction
 {
     public class InteractableObject : MonoBehaviour, IInteractable
     {
-        [SerializeField] private string interactionName = "Inspect Object";
-        [SerializeField] private string promptPrefix = "[Click]";
+        [SerializeField] private string interactionName = "Осмотреть объект";
+        [SerializeField] private string promptPrefix = "[Клик]";
         [SerializeField] private float interactionDistance = 3f;
         [SerializeField] private Color highlightColor = new Color(1f, 0.86f, 0.25f);
 
@@ -23,6 +23,7 @@ namespace IsoLight.Interaction
         public string InteractionName => interactionName;
         public float InteractionDistance => interactionDistance;
         protected PlayerCharacter ActiveCharacter => partyManager != null ? partyManager.ActiveCharacter : null;
+        protected string PromptPrefix => promptPrefix;
 
         public void Configure(string name, string prefix, float distance)
         {
@@ -51,7 +52,7 @@ namespace IsoLight.Interaction
 
             isHovered = true;
             SetHighlight(true);
-            promptUI?.Show($"{promptPrefix} {InteractionName}", this);
+            promptUI?.Show(GetPromptText(ActiveCharacter), this);
         }
 
         private void OnMouseOver()
@@ -62,7 +63,7 @@ namespace IsoLight.Interaction
                 return;
             }
 
-            promptUI?.Show($"{promptPrefix} {InteractionName}", this);
+            promptUI?.Show(GetPromptText(ActiveCharacter), this);
         }
 
         private void OnMouseExit()
@@ -92,6 +93,16 @@ namespace IsoLight.Interaction
 
         public virtual void Interact(PlayerCharacter character)
         {
+        }
+
+        protected virtual string GetPromptText(PlayerCharacter character)
+        {
+            return $"{promptPrefix} {InteractionName}";
+        }
+
+        protected virtual bool CanShowPrompt(PlayerCharacter character)
+        {
+            return true;
         }
 
         private void CacheReferences()
@@ -130,7 +141,8 @@ namespace IsoLight.Interaction
             return gameManager != null
                 && gameManager.CurrentGameMode == GameMode.Exploration
                 && partyManager != null
-                && partyManager.ActiveCharacter != null;
+                && partyManager.ActiveCharacter != null
+                && CanShowPrompt(partyManager.ActiveCharacter);
         }
 
         private void SetHighlight(bool highlighted)

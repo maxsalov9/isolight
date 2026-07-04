@@ -69,6 +69,7 @@ namespace IsoLight.Power
             }
 
             gameManager.CurrentGameMode = GameMode.PowerAllocation;
+            notificationUI?.ShowMessage("Выберите, кому достанется энергия.");
             powerAllocationBoardUI.Show(this, powerSystems);
         }
 

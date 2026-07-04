@@ -21,6 +21,7 @@ namespace IsoLight.Combat
         [SerializeField] private NotificationUI notificationUI;
         [SerializeField] private CombatStatusUI combatStatusUI;
         [SerializeField] private GeneratorStatusUI generatorStatusUI;
+        [SerializeField] private FailurePanelUI failurePanelUI;
         [SerializeField] private List<EnemyData> enemyData = new List<EnemyData>();
         [SerializeField] private List<Vector3> spawnPoints = new List<Vector3>();
 
@@ -38,7 +39,8 @@ namespace IsoLight.Combat
             GeneratorG17 targetGenerator,
             NotificationUI notifications,
             CombatStatusUI statusUI,
-            GeneratorStatusUI generatorStatus)
+            GeneratorStatusUI generatorStatus,
+            FailurePanelUI failurePanel = null)
         {
             gameManager = game;
             partyManager = party;
@@ -47,6 +49,16 @@ namespace IsoLight.Combat
             notificationUI = notifications;
             combatStatusUI = statusUI;
             generatorStatusUI = generatorStatus;
+            failurePanelUI = failurePanel;
+        }
+
+        private void Update()
+        {
+            if (IsCombatActive && AreAllPartyMembersDowned())
+            {
+                notificationUI?.ShowMessage("Весь отряд выведен из строя — столкновение провалено.");
+                EndCombat(false, "Весь отряд выведен из строя. Перезапустите столкновение или сцену для повторного playtest.");
+            }
         }
 
         public void SetEnemyData(IEnumerable<EnemyData> enemies)
@@ -125,7 +137,7 @@ namespace IsoLight.Combat
             }
 
             notificationUI?.ShowMessage("Генератор уничтожен — столкновение нужно переиграть.");
-            EndCombat(false);
+            EndCombat(false, "Generator G-17 уничтожен. Riverside остается без питания, столкновение нужно переиграть.");
         }
 
         private void SpawnEnemies()
@@ -194,6 +206,7 @@ namespace IsoLight.Combat
             {
                 enemy.Died -= HandleEnemyDied;
                 livingEnemies.Remove(enemy);
+                notificationUI?.ShowMessage($"{enemy.name} уничтожен.");
             }
 
             if (FocusedEnemy == enemy)
@@ -207,7 +220,30 @@ namespace IsoLight.Combat
             }
         }
 
-        private void EndCombat(bool victory)
+        public void DebugWinCombat()
+        {
+            if (!IsCombatActive)
+            {
+                StartCombat();
+            }
+
+            for (var i = livingEnemies.Count - 1; i >= 0; i--)
+            {
+                var enemy = livingEnemies[i];
+                if (enemy != null)
+                {
+                    enemy.Died -= HandleEnemyDied;
+                    enemy.gameObject.SetActive(false);
+                }
+            }
+
+            livingEnemies.Clear();
+            FocusedEnemy = null;
+            EndCombat(true);
+            notificationUI?.ShowMessage("Debug: бой завершен победой.");
+        }
+
+        private void EndCombat(bool victory, string failureReason = null)
         {
             IsCombatActive = false;
 
@@ -222,6 +258,10 @@ namespace IsoLight.Combat
                 questManager?.CompleteObjective(MissionFlowController.DefendGeneratorObjectiveId);
                 questManager?.ActivateObjective(AllocatePowerObjectiveId);
                 notificationUI?.ShowMessage("Генератор защищен. Комната переключателей разблокирована.");
+            }
+            else
+            {
+                failurePanelUI?.ShowFailure(failureReason);
             }
         }
 
@@ -261,6 +301,30 @@ namespace IsoLight.Combat
             {
                 generatorStatusUI = FindAnyObjectByType<GeneratorStatusUI>();
             }
+
+            if (failurePanelUI == null)
+            {
+                failurePanelUI = FindAnyObjectByType<FailurePanelUI>();
+            }
+        }
+
+        private bool AreAllPartyMembersDowned()
+        {
+            var members = partyManager?.PartyMembers;
+            if (members == null || members.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < members.Count; i++)
+            {
+                if (members[i] != null && members[i].IsAlive)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void EnsureDefaultSpawnPoints()

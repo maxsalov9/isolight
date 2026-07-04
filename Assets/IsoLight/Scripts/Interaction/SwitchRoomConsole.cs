@@ -48,6 +48,18 @@ namespace IsoLight.Interaction
             powerManager?.OpenPowerAllocationBoard();
         }
 
+        protected override string GetPromptText(PlayerCharacter character)
+        {
+            CacheReferences();
+
+            if (gameManager != null && !gameManager.MissionState.GeneratorDefended)
+            {
+                return "Консоль заблокирована: сначала защитите Generator G-17.";
+            }
+
+            return $"{PromptPrefix} Открыть распределение энергии";
+        }
+
         public void SetReferences(GameManager game, QuestManager quest, PowerManager power, NotificationUI notifications)
         {
             gameManager = game;

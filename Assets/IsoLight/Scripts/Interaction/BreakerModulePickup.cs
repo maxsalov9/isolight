@@ -90,5 +90,10 @@ namespace IsoLight.Interaction
                 questManager.ActivateObjective(FindBreakerModulesObjectiveId);
             }
         }
+
+        protected override bool CanShowPrompt(PlayerCharacter character)
+        {
+            return !collected;
+        }
     }
 }

@@ -69,6 +69,28 @@ namespace IsoLight.Power
             notificationUI?.ShowMessage("Generator G-17 уже работает.");
         }
 
+        protected override string GetPromptText(PlayerCharacter character)
+        {
+            CacheReferences();
+
+            if (!isRepaired && gameManager != null && gameManager.MissionState.BreakerModulesCollected < 2)
+            {
+                return "Generator G-17 требует 2 breaker-модуля.";
+            }
+
+            if (!isRepaired)
+            {
+                return $"{PromptPrefix} Починить Generator G-17";
+            }
+
+            if (!isStarted)
+            {
+                return $"{PromptPrefix} Запустить Generator G-17";
+            }
+
+            return "Generator G-17 уже работает.";
+        }
+
         public void TakeDamage(int amount)
         {
             if (amount <= 0 || !IsAlive)
@@ -78,10 +100,44 @@ namespace IsoLight.Power
 
             currentHealth = Mathf.Max(0, currentHealth - amount);
             lastDamageTime = Time.time;
+            notificationUI?.ShowMessage($"Generator G-17 под ударом: {currentHealth}/{maxHealth} HP.");
             if (currentHealth <= 0)
             {
                 combatManager?.HandleGeneratorDestroyed();
             }
+        }
+
+        public void DebugRepairForPlaytest()
+        {
+            CacheReferences();
+            isRepaired = true;
+            currentHealth = maxHealth;
+            if (gameManager != null)
+            {
+                gameManager.MissionState.BreakerModulesCollected = Mathf.Max(2, gameManager.MissionState.BreakerModulesCollected);
+                gameManager.MissionState.GeneratorRepaired = true;
+            }
+
+            questManager?.CompleteObjective(RepairObjectiveId);
+            questManager?.ActivateObjective(MissionFlowController.StartGeneratorObjectiveId);
+        }
+
+        public void DebugStartForPlaytest()
+        {
+            CacheReferences();
+            if (!isRepaired)
+            {
+                DebugRepairForPlaytest();
+            }
+
+            isStarted = true;
+            if (gameManager != null)
+            {
+                gameManager.MissionState.GeneratorStarted = true;
+            }
+
+            questManager?.CompleteObjective(MissionFlowController.StartGeneratorObjectiveId);
+            questManager?.ActivateObjective(MissionFlowController.DefendGeneratorObjectiveId);
         }
 
         private void TryRepair()

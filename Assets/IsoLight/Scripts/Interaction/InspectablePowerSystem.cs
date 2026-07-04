@@ -49,6 +49,11 @@ namespace IsoLight.Interaction
 
             SetMissionFlag(gameManager.MissionState);
             inspected = true;
+            var marker = GetComponent<QuestMarkerTarget>();
+            if (marker != null)
+            {
+                marker.enabled = false;
+            }
 
             var inspectedCount = CountInspectedSystems(gameManager.MissionState);
             questManager?.UpdateObjectiveDescription(
@@ -74,6 +79,16 @@ namespace IsoLight.Interaction
         public override bool CanInteract(PlayerCharacter character)
         {
             return !inspected && base.CanInteract(character);
+        }
+
+        protected override string GetPromptText(PlayerCharacter character)
+        {
+            return $"{PromptPrefix} {GetInspectionPrompt()}";
+        }
+
+        protected override bool CanShowPrompt(PlayerCharacter character)
+        {
+            return !inspected;
         }
 
         private void CacheReferences()
@@ -117,6 +132,20 @@ namespace IsoLight.Interaction
                     missionState.InspectedRelayStation = true;
                     break;
             }
+        }
+
+        private string GetInspectionPrompt()
+        {
+            return systemType switch
+            {
+                PowerSystemType.WaterFilters => "Осмотреть фильтры",
+                PowerSystemType.HydroponicFarm => "Осмотреть ферму",
+                PowerSystemType.DefenseGate => "Осмотреть ворота",
+                PowerSystemType.PublicStage => "Осмотреть сцену",
+                PowerSystemType.Workshop => "Осмотреть мастерскую",
+                PowerSystemType.RelayStation => "Осмотреть реле",
+                _ => InteractionName
+            };
         }
 
         private static int CountInspectedSystems(MissionState missionState)
