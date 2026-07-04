@@ -31,10 +31,15 @@ namespace IsoLight.Interaction
             interactionDistance = distance;
         }
 
-        private void Awake()
+        protected virtual void Awake()
         {
             CacheReferences();
             CacheRendererColors();
+        }
+
+        private void OnDisable()
+        {
+            ClearHover();
         }
 
         private void OnMouseEnter()

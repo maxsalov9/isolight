@@ -101,6 +101,22 @@ namespace IsoLight.Quests
             ObjectiveChanged?.Invoke(ActiveObjective);
         }
 
+        public void UpdateObjectiveDescription(string objectiveId, string description)
+        {
+            var objective = GetObjective(objectiveId);
+            if (objective == null)
+            {
+                return;
+            }
+
+            objective.Description = description;
+
+            if (objective.Status == ObjectiveStatus.Active)
+            {
+                ObjectiveChanged?.Invoke(objective);
+            }
+        }
+
         public ObjectiveData GetObjective(string objectiveId)
         {
             if (string.IsNullOrEmpty(objectiveId))

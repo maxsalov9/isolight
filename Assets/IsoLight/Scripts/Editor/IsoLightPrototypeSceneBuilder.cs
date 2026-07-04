@@ -62,10 +62,10 @@ namespace IsoLight.Editor
             var questData = EnsureQuestDataAsset();
 
             CreatePlaceholderUI(uiRoot.transform, questManager);
-            CreatePrototypeInteractable(interactablesRoot.transform);
+            CreateQuestInteractables(interactablesRoot.transform);
 
             partyManager.SetPartyMembers(partyCharacters);
-            questManager.SetStartupQuest(questData, "reach_riverside_shelter");
+            questManager.SetStartupQuest(questData, "find_breaker_modules");
             inputManager.SetReferences(gameManager, partyManager);
             cameraManager.SetReferences(partyManager, cameraController);
             clickToMoveController.SetReferences(gameManager, partyManager, UnityEngine.Camera.main);
@@ -111,6 +111,10 @@ namespace IsoLight.Editor
             var promptObject = new GameObject("InteractionPromptUI");
             promptObject.transform.SetParent(parent);
             promptObject.AddComponent<InteractionPromptUI>();
+
+            var notificationObject = new GameObject("NotificationUI");
+            notificationObject.transform.SetParent(parent);
+            notificationObject.AddComponent<NotificationUI>();
 
             var objectiveObject = new GameObject("ObjectivePanelUI");
             objectiveObject.transform.SetParent(parent);
@@ -226,22 +230,116 @@ namespace IsoLight.Editor
             return playerCharacter;
         }
 
-        private static void CreatePrototypeInteractable(Transform parent)
+        private static void CreateQuestInteractables(Transform parent)
         {
-            var interactableObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            interactableObject.name = "Prototype_Interactable_Notice";
-            interactableObject.transform.SetParent(parent);
-            interactableObject.transform.position = new Vector3(0f, 0.5f, 4f);
-            interactableObject.transform.localScale = new Vector3(1.5f, 1f, 0.4f);
+            CreateBreakerModule(parent, "BreakerModule_A", new Vector3(-5f, 0.25f, 4f));
+            CreateBreakerModule(parent, "BreakerModule_B", new Vector3(5f, 0.25f, 4f));
 
-            var renderer = interactableObject.GetComponent<Renderer>();
+            CreateInspectableSystem(
+                parent,
+                "Filter Station",
+                PowerSystemType.WaterFilters,
+                "Water Filters inspected.",
+                new Vector3(-8f, 0.5f, 8f),
+                new Color(0.2f, 0.55f, 0.95f));
+            CreateInspectableSystem(
+                parent,
+                "Hydroponic Farm",
+                PowerSystemType.HydroponicFarm,
+                "Hydroponic Farm inspected.",
+                new Vector3(-4f, 0.5f, 8f),
+                new Color(0.28f, 0.72f, 0.3f));
+            CreateInspectableSystem(
+                parent,
+                "Defense Gate",
+                PowerSystemType.DefenseGate,
+                "Defense Gate inspected.",
+                new Vector3(0f, 0.5f, 8f),
+                new Color(0.65f, 0.65f, 0.7f));
+            CreateInspectableSystem(
+                parent,
+                "Public Stage",
+                PowerSystemType.PublicStage,
+                "Public Stage inspected.",
+                new Vector3(4f, 0.5f, 8f),
+                new Color(0.85f, 0.55f, 0.25f));
+            CreateInspectableSystem(
+                parent,
+                "Workshop",
+                PowerSystemType.Workshop,
+                "Workshop inspected.",
+                new Vector3(8f, 0.5f, 8f),
+                new Color(0.55f, 0.42f, 0.32f));
+            CreateInspectableSystem(
+                parent,
+                "Relay Station",
+                PowerSystemType.RelayStation,
+                "Relay Station inspected.",
+                new Vector3(0f, 0.5f, 12f),
+                new Color(0.55f, 0.45f, 0.9f));
+
+            CreateSwitchRoomConsole(parent, new Vector3(0f, 0.6f, -8f));
+        }
+
+        private static void CreateBreakerModule(Transform parent, string name, Vector3 position)
+        {
+            var moduleObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            moduleObject.name = name;
+            moduleObject.transform.SetParent(parent);
+            moduleObject.transform.position = position;
+            moduleObject.transform.localScale = new Vector3(0.8f, 0.35f, 0.8f);
+
+            var renderer = moduleObject.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.sharedMaterial = CreateRuntimeMaterial("MAT_Runtime_Interactable", new Color(0.45f, 0.42f, 0.35f));
+                renderer.sharedMaterial = CreateRuntimeMaterial($"MAT_Runtime_{name}", new Color(0.9f, 0.75f, 0.2f));
             }
 
-            var interactable = interactableObject.AddComponent<InteractableObject>();
-            interactable.Configure("Inspect Notice", "[Click]", 3f);
+            var pickup = moduleObject.AddComponent<BreakerModulePickup>();
+            pickup.Configure("Pick Up Breaker Module", "[Click]", 4.5f);
+        }
+
+        private static void CreateInspectableSystem(
+            Transform parent,
+            string displayName,
+            PowerSystemType systemType,
+            string inspectionMessage,
+            Vector3 position,
+            Color color)
+        {
+            var systemObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            systemObject.name = displayName;
+            systemObject.transform.SetParent(parent);
+            systemObject.transform.position = position;
+            systemObject.transform.localScale = new Vector3(1.4f, 1f, 1.4f);
+
+            var renderer = systemObject.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = CreateRuntimeMaterial($"MAT_Runtime_{displayName.Replace(" ", string.Empty)}", color);
+            }
+
+            var inspectable = systemObject.AddComponent<InspectablePowerSystem>();
+            inspectable.Configure($"Inspect {displayName}", "[Click]", 5f);
+            inspectable.ConfigurePowerSystem(systemType, inspectionMessage);
+        }
+
+        private static void CreateSwitchRoomConsole(Transform parent, Vector3 position)
+        {
+            var consoleObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            consoleObject.name = "SwitchRoomConsole";
+            consoleObject.transform.SetParent(parent);
+            consoleObject.transform.position = position;
+            consoleObject.transform.localScale = new Vector3(1.8f, 1.2f, 0.8f);
+
+            var renderer = consoleObject.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = CreateRuntimeMaterial("MAT_Runtime_SwitchRoomConsole", new Color(0.25f, 0.5f, 0.65f));
+            }
+
+            var console = consoleObject.AddComponent<SwitchRoomConsole>();
+            console.Configure("Use Switch Room Console", "[Click]", 5f);
         }
 
         private static CharacterData EnsureCharacterDataAsset(
@@ -302,7 +400,25 @@ namespace IsoLight.Editor
             questData.Objectives.Add(new ObjectiveData
             {
                 Id = "inspect_key_systems",
-                Description = "Inspect key systems",
+                Description = "Inspect Key Systems: 0/6",
+                Status = ObjectiveStatus.Hidden
+            });
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = "find_breaker_modules",
+                Description = "Find 2 Breaker Modules: 0/2",
+                Status = ObjectiveStatus.Hidden
+            });
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = "repair_generator_line",
+                Description = "Repair Generator Line",
+                Status = ObjectiveStatus.Hidden
+            });
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = "allocate_power",
+                Description = "Allocate Power",
                 Status = ObjectiveStatus.Hidden
             });
 

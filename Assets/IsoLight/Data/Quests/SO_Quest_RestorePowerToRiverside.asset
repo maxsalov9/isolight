@@ -23,5 +23,14 @@ MonoBehaviour:
     Description: Speak with Mara Vey
     Status: 0
   - Id: inspect_key_systems
-    Description: Inspect key systems
+    Description: 'Inspect Key Systems: 0/6'
+    Status: 0
+  - Id: find_breaker_modules
+    Description: 'Find 2 Breaker Modules: 0/2'
+    Status: 0
+  - Id: repair_generator_line
+    Description: Repair Generator Line
+    Status: 0
+  - Id: allocate_power
+    Description: Allocate Power
     Status: 0
