@@ -99,7 +99,18 @@ namespace IsoLight.Characters
                 return;
             }
 
+            navMeshAgent.isStopped = false;
             navMeshAgent.SetDestination(destination);
+        }
+
+        public void SetMovementPaused(bool paused)
+        {
+            if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            navMeshAgent.isStopped = paused;
         }
 
         public bool TryAttack(IDamageable target)

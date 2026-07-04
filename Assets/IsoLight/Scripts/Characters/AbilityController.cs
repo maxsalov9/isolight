@@ -49,6 +49,12 @@ namespace IsoLight.Characters
         {
             CacheReferences();
 
+            var commandController = FindAnyObjectByType<CombatCommandController>();
+            if (commandController != null && commandController.CanHandleCombatInput)
+            {
+                return;
+            }
+
             if (WasAbilityPressed(0))
             {
                 UseAbilitySlot(0);
@@ -112,6 +118,82 @@ namespace IsoLight.Characters
             return GetAbilityPreview(caster, abilities[slotIndex]);
         }
 
+        public bool CanBeginTargetMode(PlayerCharacter caster, AbilityData ability, out string failureReason)
+        {
+            CacheReferences();
+            failureReason = null;
+
+            if (caster == null)
+            {
+                failureReason = "Нет активного персонажа.";
+                return false;
+            }
+
+            if (ability == null)
+            {
+                failureReason = "Способность не назначена.";
+                return false;
+            }
+
+            if (gameManager == null || combatManager == null || !combatManager.IsCombatActive || gameManager.CurrentGameMode != GameMode.Combat)
+            {
+                failureReason = "Только в бою";
+                return false;
+            }
+
+            if (!caster.HasEnoughEnergy(ability))
+            {
+                failureReason = "Недостаточно энергии";
+                return false;
+            }
+
+            if (caster.GetAbilityCooldownRemaining(ability) > 0f)
+            {
+                failureReason = "Способность перезаряжается";
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool TryUseAbility(PlayerCharacter caster, AbilityData ability, Component explicitTarget, out string failureReason)
+        {
+            var preview = GetAbilityPreviewForTarget(caster, ability, explicitTarget);
+            if (!preview.IsUsable)
+            {
+                failureReason = preview.UnavailableReason;
+                return false;
+            }
+
+            if (!caster.TryBeginAbility(preview.Ability, out failureReason))
+            {
+                return false;
+            }
+
+            ApplyAbility(caster, preview);
+            failureReason = null;
+            return true;
+        }
+
+        public AbilityTargetPreview GetAbilityPreviewForTarget(PlayerCharacter caster, AbilityData ability, Component explicitTarget)
+        {
+            var preview = new AbilityTargetPreview
+            {
+                Ability = ability,
+                CooldownRemaining = caster != null ? caster.GetAbilityCooldownRemaining(ability) : 0f
+            };
+
+            if (!CanBeginTargetMode(caster, ability, out var failureReason))
+            {
+                preview.UnavailableReason = failureReason;
+                return preview;
+            }
+
+            ResolveExplicitTarget(caster, ability, explicitTarget, preview);
+            preview.IsUsable = preview.Target != null;
+            return preview;
+        }
+
         public AbilityTargetPreview GetAbilityPreview(PlayerCharacter caster, AbilityData ability)
         {
             var preview = new AbilityTargetPreview
@@ -155,6 +237,104 @@ namespace IsoLight.Characters
             ResolveTarget(caster, ability, preview);
             preview.IsUsable = preview.Target != null;
             return preview;
+        }
+
+        private void ResolveExplicitTarget(PlayerCharacter caster, AbilityData ability, Component explicitTarget, AbilityTargetPreview preview)
+        {
+            if (explicitTarget == null)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            switch (ability.EffectType)
+            {
+                case AbilityEffectType.RepairGenerator:
+                    ResolveExplicitGeneratorTarget(caster, ability, explicitTarget, preview);
+                    break;
+                case AbilityEffectType.HealAlly:
+                    ResolveExplicitHealTarget(caster, ability, explicitTarget, preview, true);
+                    break;
+                case AbilityEffectType.StabilizeAlly:
+                    ResolveExplicitHealTarget(caster, ability, explicitTarget, preview, false);
+                    break;
+                case AbilityEffectType.DamageEnemy:
+                case AbilityEffectType.ShockEnemy:
+                    ResolveExplicitEnemyTarget(caster, ability, explicitTarget, preview);
+                    break;
+                default:
+                    preview.UnavailableReason = "Нет подходящей цели";
+                    break;
+            }
+        }
+
+        private void ResolveExplicitGeneratorTarget(PlayerCharacter caster, AbilityData ability, Component explicitTarget, AbilityTargetPreview preview)
+        {
+            var targetGenerator = explicitTarget as GeneratorG17;
+            if (targetGenerator == null || targetGenerator != generator || !targetGenerator.IsAlive)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            if (targetGenerator.CurrentHealth >= targetGenerator.MaxHealth)
+            {
+                preview.UnavailableReason = "Генератор не поврежден.";
+                return;
+            }
+
+            if (!IsInRange(caster.transform.position, targetGenerator.transform.position, ability.Range))
+            {
+                preview.UnavailableReason = "Generator G-17 слишком далеко";
+                return;
+            }
+
+            preview.Target = targetGenerator;
+            preview.TargetLabel = "Generator G-17";
+        }
+
+        private void ResolveExplicitEnemyTarget(PlayerCharacter caster, AbilityData ability, Component explicitTarget, AbilityTargetPreview preview)
+        {
+            var enemy = explicitTarget as Enemy;
+            if (enemy == null || !enemy.IsAlive)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            if (!IsInRange(caster.transform.position, enemy.transform.position, ability.Range))
+            {
+                preview.UnavailableReason = "Цель слишком далеко";
+                return;
+            }
+
+            preview.Target = enemy;
+            preview.TargetLabel = enemy.name;
+        }
+
+        private void ResolveExplicitHealTarget(PlayerCharacter caster, AbilityData ability, Component explicitTarget, AbilityTargetPreview preview, bool requireInjured)
+        {
+            var ally = explicitTarget as PlayerCharacter;
+            if (ally == null || !ally.IsAlive)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            if (requireInjured && ally.CurrentHealth >= ally.MaxHealth)
+            {
+                preview.UnavailableReason = "Нет раненых союзников";
+                return;
+            }
+
+            if (!IsInRange(caster.transform.position, ally.transform.position, ability.Range))
+            {
+                preview.UnavailableReason = "Цель слишком далеко";
+                return;
+            }
+
+            preview.Target = ally;
+            preview.TargetLabel = ally.DisplayName;
         }
 
         private void ResolveTarget(PlayerCharacter caster, AbilityData ability, AbilityTargetPreview preview)

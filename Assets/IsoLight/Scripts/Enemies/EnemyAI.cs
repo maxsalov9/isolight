@@ -55,6 +55,17 @@ namespace IsoLight.Enemies
                 return;
             }
 
+            if (combatManager.IsTacticalPaused)
+            {
+                currentState = EnemyState.Idle;
+                if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+                {
+                    navMeshAgent.isStopped = true;
+                }
+
+                return;
+            }
+
             if (Time.time < stunnedUntilTime)
             {
                 currentState = EnemyState.Idle;

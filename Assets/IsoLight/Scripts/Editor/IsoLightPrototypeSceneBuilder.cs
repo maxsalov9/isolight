@@ -56,6 +56,7 @@ namespace IsoLight.Editor
             var missionFlowController = CreateManager<MissionFlowController>("MissionFlowController", gameRoot.transform);
             var dialogueManager = CreateManager<DialogueManager>("DialogueManager", gameRoot.transform);
             var combatManager = CreateManager<CombatManager>("CombatManager", gameRoot.transform);
+            var combatCommandController = CreateManager<CombatCommandController>("CombatCommandController", gameRoot.transform);
             var powerManager = CreateManager<PowerManager>("PowerManager", gameRoot.transform);
             var abilityController = CreateManager<AbilityController>("AbilityController", gameRoot.transform);
             var relationshipManager = CreateManager<RelationshipManager>("RelationshipManager", gameRoot.transform);
@@ -92,8 +93,10 @@ namespace IsoLight.Editor
             powerManager.SetReferences(gameManager, questManager, relationshipManager, uiRefs.PowerAllocationBoardUI, uiRefs.ResultPanelUI, resultVisualController);
             powerManager.SetPowerSystems(powerSystemAssets);
             abilityController.SetReferences(gameManager, partyManager, combatManager, generator, uiRefs.NotificationUI);
-            uiRefs.AbilityBarUI.SetReferences(gameManager, partyManager, abilityController);
+            combatCommandController.SetReferences(gameManager, partyManager, combatManager, abilityController, generator, uiRefs.NotificationUI, UnityEngine.Camera.main);
+            uiRefs.AbilityBarUI.SetReferences(gameManager, partyManager, abilityController, combatCommandController);
             uiRefs.AbilityTargetIndicatorUI.SetReferences(gameManager, partyManager, abilityController);
+            uiRefs.CombatCommandUI.SetReferences(combatManager, partyManager, combatCommandController);
             uiRefs.MissionHintNotifier.SetReferences(questManager, uiRefs.NotificationUI);
             uiRefs.FailurePanelUI.SetCombatManager(combatManager);
             uiRefs.PlaytestDebugPanelUI.SetReferences(gameManager, questManager, combatManager, powerManager, generator, uiRefs.NotificationUI);
@@ -170,6 +173,7 @@ namespace IsoLight.Editor
             public PartyHUDUI PartyHUDUI;
             public AbilityBarUI AbilityBarUI;
             public AbilityTargetIndicatorUI AbilityTargetIndicatorUI;
+            public CombatCommandUI CombatCommandUI;
             public MissionHintNotifier MissionHintNotifier;
             public FailurePanelUI FailurePanelUI;
             public PlaytestDebugPanelUI PlaytestDebugPanelUI;
@@ -303,6 +307,10 @@ namespace IsoLight.Editor
             abilityTargetObject.transform.SetParent(parent);
             var abilityTargetIndicator = abilityTargetObject.AddComponent<AbilityTargetIndicatorUI>();
 
+            var combatCommandObject = new GameObject("CombatCommandUI");
+            combatCommandObject.transform.SetParent(parent);
+            var combatCommandUI = combatCommandObject.AddComponent<CombatCommandUI>();
+
             var hintObject = new GameObject("MissionHintNotifier");
             hintObject.transform.SetParent(parent);
             var missionHintNotifier = hintObject.AddComponent<MissionHintNotifier>();
@@ -328,6 +336,7 @@ namespace IsoLight.Editor
                 PartyHUDUI = partyHud,
                 AbilityBarUI = abilityBar,
                 AbilityTargetIndicatorUI = abilityTargetIndicator,
+                CombatCommandUI = combatCommandUI,
                 MissionHintNotifier = missionHintNotifier,
                 FailurePanelUI = failurePanel,
                 PlaytestDebugPanelUI = debugPanel
@@ -826,18 +835,18 @@ namespace IsoLight.Editor
         {
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
-            cameraObject.transform.position = new Vector3(-8.8f, 16.5f, -8.8f);
-            cameraObject.transform.rotation = Quaternion.Euler(63f, 45f, 0f);
+            cameraObject.transform.position = new Vector3(-9f, 15f, -9f);
+            cameraObject.transform.rotation = Quaternion.Euler(57f, 45f, 0f);
 
             var camera = cameraObject.AddComponent<UnityEngine.Camera>();
             camera.orthographic = true;
-            camera.orthographicSize = 15f;
+            camera.orthographicSize = 16f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 200f;
 
             cameraObject.AddComponent<AudioListener>();
             var cameraController = cameraObject.AddComponent<IsometricCameraController>();
-            cameraController.ConfigureView(63f, 45f, 15f, 10f, 22f, 0f, 18.5f);
+            cameraController.ConfigureView(57f, 45f, 16f, 11f, 24f, 0f, 17.5f);
             return cameraController;
         }
 

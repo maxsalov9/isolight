@@ -29,6 +29,7 @@ namespace IsoLight.Combat
         private Transform enemyParent;
 
         public bool IsCombatActive { get; private set; }
+        public bool IsTacticalPaused { get; private set; }
         public int LivingEnemyCount => livingEnemies.Count;
         public IReadOnlyList<Enemy> LivingEnemies => livingEnemies;
         public Enemy FocusedEnemy { get; private set; }
@@ -59,6 +60,14 @@ namespace IsoLight.Combat
             {
                 notificationUI?.ShowMessage("Весь отряд выведен из строя — столкновение провалено.");
                 EndCombat(false, "Весь отряд выведен из строя. Перезапустите столкновение или сцену для повторного playtest.");
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (IsTacticalPaused)
+            {
+                Time.timeScale = 1f;
             }
         }
 
@@ -95,6 +104,7 @@ namespace IsoLight.Combat
             }
 
             IsCombatActive = true;
+            SetTacticalPause(false);
             gameManager.CurrentGameMode = GameMode.Combat;
             livingEnemies.Clear();
             FocusedEnemy = null;
@@ -128,6 +138,31 @@ namespace IsoLight.Combat
             }
 
             FocusedEnemy = enemy;
+        }
+
+        public void SetFocusedEnemy(Enemy enemy)
+        {
+            if (enemy != null && enemy.IsAlive)
+            {
+                FocusedEnemy = enemy;
+            }
+        }
+
+        public void ToggleTacticalPause()
+        {
+            SetTacticalPause(!IsTacticalPaused);
+        }
+
+        public void SetTacticalPause(bool paused)
+        {
+            if (!IsCombatActive && paused)
+            {
+                return;
+            }
+
+            IsTacticalPaused = paused;
+            Time.timeScale = paused ? 0f : 1f;
+            SetPartyMovementPaused(paused);
         }
 
         public void HandleGeneratorDestroyed()
@@ -294,6 +329,7 @@ namespace IsoLight.Combat
 
         private void EndCombat(bool victory, string failureReason = null)
         {
+            SetTacticalPause(false);
             IsCombatActive = false;
 
             if (gameManager != null)
@@ -311,6 +347,20 @@ namespace IsoLight.Combat
             else
             {
                 failurePanelUI?.ShowFailure(failureReason);
+            }
+        }
+
+        private void SetPartyMovementPaused(bool paused)
+        {
+            var members = partyManager?.PartyMembers;
+            if (members == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < members.Count; i++)
+            {
+                members[i]?.SetMovementPaused(paused);
             }
         }
 

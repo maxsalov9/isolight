@@ -1,4 +1,5 @@
 using IsoLight.Characters;
+using IsoLight.Combat;
 using IsoLight.Core;
 using IsoLight.Party;
 using UnityEngine;
@@ -10,6 +11,7 @@ namespace IsoLight.UI
         [SerializeField] private GameManager gameManager;
         [SerializeField] private PartyManager partyManager;
         [SerializeField] private AbilityController abilityController;
+        [SerializeField] private CombatCommandController commandController;
 
         private readonly string[] hotkeys = { "Q", "E", "R" };
         private GUIStyle panelStyle;
@@ -18,11 +20,12 @@ namespace IsoLight.UI
         private GUIStyle buttonStyle;
         private GUIStyle statusStyle;
 
-        public void SetReferences(GameManager game, PartyManager party, AbilityController controller)
+        public void SetReferences(GameManager game, PartyManager party, AbilityController controller, CombatCommandController combatCommands = null)
         {
             gameManager = game;
             partyManager = party;
             abilityController = controller;
+            commandController = combatCommands;
         }
 
         private void Awake()
@@ -51,6 +54,12 @@ namespace IsoLight.UI
             var rect = new Rect(Screen.width * 0.5f - width * 0.5f, Screen.height - 136f, width, 120f);
             GUI.Box(rect, string.Empty, panelStyle);
             GUI.Label(new Rect(rect.x + 10f, rect.y + 6f, rect.width - 20f, 20f), $"Способности: {activeCharacter.DisplayName} | Энергия {activeCharacter.CurrentEnergy}/{activeCharacter.MaxEnergy}", titleStyle);
+
+            if (commandController != null && commandController.IsAbilityTargetModeActive)
+            {
+                var hintRect = new Rect(rect.x, rect.y - 46f, rect.width, 38f);
+                GUI.Box(hintRect, $"Выбор цели: {commandController.TargetingAbilityName} | ЛКМ: выбрать цель | Esc: отменить", statusStyle);
+            }
 
             for (var i = 0; i < abilityCount; i++)
             {
@@ -84,7 +93,14 @@ namespace IsoLight.UI
 
             if (GUI.Button(rect, label, buttonStyle))
             {
-                abilityController?.UseAbilitySlot(index);
+                if (commandController != null && commandController.CanHandleCombatInput)
+                {
+                    commandController.BeginOrToggleAbilityTargetMode(index);
+                }
+                else
+                {
+                    abilityController?.UseAbilitySlot(index);
+                }
             }
 
             GUI.backgroundColor = previousColor;
@@ -127,6 +143,7 @@ namespace IsoLight.UI
             if (gameManager == null) gameManager = FindAnyObjectByType<GameManager>();
             if (partyManager == null) partyManager = FindAnyObjectByType<PartyManager>();
             if (abilityController == null) abilityController = FindAnyObjectByType<AbilityController>();
+            if (commandController == null) commandController = FindAnyObjectByType<CombatCommandController>();
         }
 
         private static GUIStyle CreateTitleStyle()

@@ -11,13 +11,13 @@ namespace IsoLight.Camera
         [SerializeField] private Transform target;
         [SerializeField] private float followSpeed = 8f;
         [SerializeField] private float zoomSpeed = 4f;
-        [SerializeField] private float cameraPitch = 63f;
+        [SerializeField] private float cameraPitch = 57f;
         [SerializeField] private float yaw = 45f;
-        [SerializeField] private float orthographicSize = 15f;
-        [SerializeField] private float minZoom = 10f;
-        [SerializeField] private float maxZoom = 22f;
+        [SerializeField] private float orthographicSize = 16f;
+        [SerializeField] private float minZoom = 11f;
+        [SerializeField] private float maxZoom = 24f;
         [SerializeField] private float followHeight = 0f;
-        [SerializeField] private float followDistance = 18.5f;
+        [SerializeField] private float followDistance = 17.5f;
         [SerializeField] private Vector2 boundsMin = new Vector2(-25f, -25f);
         [SerializeField] private Vector2 boundsMax = new Vector2(25f, 25f);
 

@@ -37,6 +37,11 @@ namespace IsoLight.Enemies
 
         private void OnMouseDown()
         {
+            if (FindAnyObjectByType<CombatCommandController>() != null)
+            {
+                return;
+            }
+
             combatManager ??= FindAnyObjectByType<CombatManager>();
             combatManager?.HandleEnemyClicked(this);
         }
