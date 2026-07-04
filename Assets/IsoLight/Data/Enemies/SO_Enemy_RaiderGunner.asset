@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: raider_gunner
   DisplayName: Raider Gunner
-  MaxHealth: 60
+  MaxHealth: 95
   Damage: 12
-  AttackRange: 7
-  AttackCooldown: 2.1
-  MoveSpeed: 2.2
+  AttackRange: 7.5
+  AttackCooldown: 2.6
+  MoveSpeed: 1.9
   Role: 1

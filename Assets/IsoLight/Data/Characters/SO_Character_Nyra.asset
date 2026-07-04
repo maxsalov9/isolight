@@ -16,8 +16,11 @@ MonoBehaviour:
   DisplayName: Nyra
   Role: "\u0422\u0435\u0445\u043D\u0438\u043A"
   Portrait: {fileID: 0}
-  MaxHealth: 85
-  MaxEnergy: 80
+  MaxHealth: 95
+  MaxEnergy: 85
+  AttackDamage: 13
+  AttackRange: 7
+  AttackCooldown: 1
   Abilities:
   - {fileID: 11400000, guid: 1522d7560afe4b4eb1055d252d945fab, type: 2}
   - {fileID: 11400000, guid: 6bf285d1c6e248ee9cd4435d59208f8a, type: 2}

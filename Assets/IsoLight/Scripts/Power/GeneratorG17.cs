@@ -45,6 +45,12 @@ namespace IsoLight.Power
             notificationUI = notifications;
         }
 
+        public void ConfigureStats(int maximumHealth)
+        {
+            maxHealth = Mathf.Max(1, maximumHealth);
+            currentHealth = Mathf.Clamp(currentHealth <= 0 ? maxHealth : currentHealth, 0, maxHealth);
+        }
+
         public override void Interact(PlayerCharacter character)
         {
             if (!base.CanInteract(character))
@@ -100,7 +106,7 @@ namespace IsoLight.Power
 
             currentHealth = Mathf.Max(0, currentHealth - amount);
             lastDamageTime = Time.time;
-            notificationUI?.ShowMessage($"Generator G-17 под ударом: {currentHealth}/{maxHealth} HP.");
+            notificationUI?.ShowMessage($"Generator G-17 получает урон: {currentHealth}/{maxHealth} HP.");
             if (currentHealth <= 0)
             {
                 combatManager?.HandleGeneratorDestroyed();

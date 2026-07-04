@@ -12,6 +12,17 @@ using UnityEngine.InputSystem;
 
 namespace IsoLight.Characters
 {
+    public class AbilityTargetPreview
+    {
+        public AbilityData Ability;
+        public Component Target;
+        public string TargetLabel;
+        public string UnavailableReason;
+        public float CooldownRemaining;
+        public bool IsUsable;
+        public bool HasTarget => Target != null;
+    }
+
     public class AbilityController : MonoBehaviour
     {
         [SerializeField] private GameManager gameManager;
@@ -57,127 +68,271 @@ namespace IsoLight.Characters
             CacheReferences();
 
             var caster = partyManager != null ? partyManager.ActiveCharacter : null;
-            if (caster == null)
+            var preview = GetAbilityPreview(slotIndex);
+            if (preview.Ability == null)
             {
-                notificationUI?.ShowMessage("Нет активного персонажа.");
+                notificationUI?.ShowMessage(preview.UnavailableReason);
                 return;
             }
 
-            if (gameManager == null || combatManager == null || !combatManager.IsCombatActive || gameManager.CurrentGameMode != GameMode.Combat)
+            if (!preview.IsUsable)
             {
-                notificationUI?.ShowMessage("Способности доступны только во время боя.");
+                notificationUI?.ShowMessage(preview.UnavailableReason);
                 return;
             }
 
-            var abilities = caster.Abilities;
-            if (slotIndex < 0 || slotIndex >= abilities.Count || abilities[slotIndex] == null)
-            {
-                notificationUI?.ShowMessage("Способность не назначена.");
-                return;
-            }
-
-            var ability = abilities[slotIndex];
-            if (!HasValidTarget(caster, ability, out var targetDescription))
-            {
-                notificationUI?.ShowMessage(targetDescription);
-                return;
-            }
-
-            if (!caster.TryBeginAbility(ability, out var failureReason))
+            if (!caster.TryBeginAbility(preview.Ability, out var failureReason))
             {
                 notificationUI?.ShowMessage(failureReason);
                 return;
             }
 
-            ApplyAbility(caster, ability);
+            ApplyAbility(caster, preview);
         }
 
-        private bool HasValidTarget(PlayerCharacter caster, AbilityData ability, out string failureReason)
+        public AbilityTargetPreview GetAbilityPreview(int slotIndex)
         {
-            failureReason = "Нет подходящей цели.";
+            CacheReferences();
 
+            var preview = new AbilityTargetPreview();
+            var caster = partyManager != null ? partyManager.ActiveCharacter : null;
+            if (caster == null)
+            {
+                preview.UnavailableReason = "Нет активного персонажа.";
+                return preview;
+            }
+
+            var abilities = caster.Abilities;
+            if (slotIndex < 0 || slotIndex >= abilities.Count || abilities[slotIndex] == null)
+            {
+                preview.UnavailableReason = "Способность не назначена.";
+                return preview;
+            }
+
+            return GetAbilityPreview(caster, abilities[slotIndex]);
+        }
+
+        public AbilityTargetPreview GetAbilityPreview(PlayerCharacter caster, AbilityData ability)
+        {
+            var preview = new AbilityTargetPreview
+            {
+                Ability = ability,
+                CooldownRemaining = caster != null ? caster.GetAbilityCooldownRemaining(ability) : 0f
+            };
+
+            if (caster == null)
+            {
+                preview.UnavailableReason = "Нет активного персонажа.";
+                return preview;
+            }
+
+            if (ability == null)
+            {
+                preview.UnavailableReason = "Способность не назначена.";
+                return preview;
+            }
+
+            if (gameManager == null || combatManager == null || !combatManager.IsCombatActive || gameManager.CurrentGameMode != GameMode.Combat)
+            {
+                preview.UnavailableReason = "Только в бою";
+                return preview;
+            }
+
+            if (!caster.HasEnoughEnergy(ability))
+            {
+                preview.UnavailableReason = "Недостаточно энергии";
+                ResolveTarget(caster, ability, preview);
+                return preview;
+            }
+
+            if (preview.CooldownRemaining > 0f)
+            {
+                preview.UnavailableReason = "Способность перезаряжается";
+                ResolveTarget(caster, ability, preview);
+                return preview;
+            }
+
+            ResolveTarget(caster, ability, preview);
+            preview.IsUsable = preview.Target != null;
+            return preview;
+        }
+
+        private void ResolveTarget(PlayerCharacter caster, AbilityData ability, AbilityTargetPreview preview)
+        {
             switch (ability.EffectType)
             {
                 case AbilityEffectType.RepairGenerator:
-                    if (generator == null || !generator.IsAlive || generator.CurrentHealth >= generator.MaxHealth)
-                    {
-                        failureReason = "Generator G-17 не нуждается в ремонте.";
-                        return false;
-                    }
-
-                    if (!IsInRange(caster.transform.position, generator.transform.position, ability.Range))
-                    {
-                        failureReason = "Generator G-17 слишком далеко.";
-                        return false;
-                    }
-
-                    return true;
-
+                    ResolveGeneratorTarget(caster, ability, preview);
+                    break;
                 case AbilityEffectType.HealAlly:
+                    ResolveHealTarget(caster, ability, preview);
+                    break;
                 case AbilityEffectType.StabilizeAlly:
-                    var ally = FindMostInjuredAlly(caster, ability.Range);
-                    if (ally == null)
-                    {
-                        failureReason = "Нет раненого союзника в зоне.";
-                        return false;
-                    }
-
-                    return true;
-
+                    ResolveStabilizeTarget(caster, ability, preview);
+                    break;
                 case AbilityEffectType.DamageEnemy:
                 case AbilityEffectType.ShockEnemy:
-                    var enemy = FindEnemyTarget(caster, ability.Range);
-                    if (enemy == null)
-                    {
-                        failureReason = "Нет врага в зоне.";
-                        return false;
-                    }
-
-                    return true;
-
+                    ResolveEnemyTarget(caster, ability, preview);
+                    break;
                 default:
-                    return false;
+                    preview.UnavailableReason = "Нет подходящей цели";
+                    break;
             }
         }
 
-        private void ApplyAbility(PlayerCharacter caster, AbilityData ability)
+        private void ResolveGeneratorTarget(PlayerCharacter caster, AbilityData ability, AbilityTargetPreview preview)
         {
+            if (generator == null || !generator.IsAlive)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            if (generator.CurrentHealth >= generator.MaxHealth)
+            {
+                preview.UnavailableReason = "Генератор не поврежден";
+                return;
+            }
+
+            if (!IsInRange(caster.transform.position, generator.transform.position, ability.Range))
+            {
+                preview.UnavailableReason = "Generator G-17 слишком далеко";
+                return;
+            }
+
+            preview.Target = generator;
+            preview.TargetLabel = "Generator G-17";
+        }
+
+        private void ResolveEnemyTarget(PlayerCharacter caster, AbilityData ability, AbilityTargetPreview preview)
+        {
+            var enemy = FindEnemyTarget(caster, ability.Range);
+            if (enemy == null)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            preview.Target = enemy;
+            preview.TargetLabel = enemy.name;
+        }
+
+        private void ResolveHealTarget(PlayerCharacter caster, AbilityData ability, AbilityTargetPreview preview)
+        {
+            var ally = FindMostInjuredAlly(caster, ability.Range);
+            if (ally == null)
+            {
+                preview.UnavailableReason = "Нет раненых союзников";
+                return;
+            }
+
+            preview.Target = ally;
+            preview.TargetLabel = ally.DisplayName;
+        }
+
+        private void ResolveStabilizeTarget(PlayerCharacter caster, AbilityData ability, AbilityTargetPreview preview)
+        {
+            var ally = FindMostInjuredAlly(caster, ability.Range);
+            if (ally == null && caster != null && caster.IsAlive)
+            {
+                ally = caster;
+            }
+
+            if (ally == null)
+            {
+                preview.UnavailableReason = "Нет подходящей цели";
+                return;
+            }
+
+            preview.Target = ally;
+            preview.TargetLabel = ally.DisplayName;
+        }
+
+        private void ApplyAbility(PlayerCharacter caster, AbilityTargetPreview preview)
+        {
+            var ability = preview.Ability;
             switch (ability.EffectType)
             {
                 case AbilityEffectType.RepairGenerator:
                     generator.RepairHealth(ability.PowerAmount);
-                    notificationUI?.ShowMessage($"{caster.DisplayName} использует {ability.DisplayName}. Generator G-17: {generator.CurrentHealth}/{generator.MaxHealth} HP.");
+                    FlashTarget(preview.Target, GetAbilityColor(ability));
+                    notificationUI?.ShowMessage($"{caster.DisplayName}: {ability.DisplayName}. Generator G-17: {generator.CurrentHealth}/{generator.MaxHealth} HP.");
                     break;
 
                 case AbilityEffectType.DamageEnemy:
-                    var damageTarget = FindEnemyTarget(caster, ability.Range);
+                    var damageTarget = preview.Target as Enemy;
                     damageTarget?.TakeDamage(ability.PowerAmount);
-                    notificationUI?.ShowMessage($"{caster.DisplayName} использует {ability.DisplayName}.");
+                    FlashTarget(damageTarget, GetAbilityColor(ability));
+                    notificationUI?.ShowMessage($"{caster.DisplayName}: {ability.DisplayName}");
                     break;
 
                 case AbilityEffectType.ShockEnemy:
-                    var shockTarget = FindEnemyTarget(caster, ability.Range);
+                    var shockTarget = preview.Target as Enemy;
                     if (shockTarget != null)
                     {
                         shockTarget.TakeDamage(ability.PowerAmount);
                         shockTarget.GetComponent<EnemyAI>()?.StunFor(ability.StunDuration);
                     }
 
-                    notificationUI?.ShowMessage($"{caster.DisplayName} применяет {ability.DisplayName}.");
+                    FlashTarget(shockTarget, GetAbilityColor(ability));
+                    notificationUI?.ShowMessage($"{caster.DisplayName}: {ability.DisplayName}");
                     break;
 
                 case AbilityEffectType.HealAlly:
-                    var healTarget = FindMostInjuredAlly(caster, ability.Range);
+                    var healTarget = preview.Target as PlayerCharacter;
                     healTarget?.Heal(ability.PowerAmount);
-                    notificationUI?.ShowMessage($"{caster.DisplayName} лечит союзника.");
+                    FlashTarget(healTarget, GetAbilityColor(ability));
+                    notificationUI?.ShowMessage($"{caster.DisplayName}: {ability.DisplayName}");
                     break;
 
                 case AbilityEffectType.StabilizeAlly:
-                    var stabilizeTarget = FindMostInjuredAlly(caster, ability.Range);
+                    var stabilizeTarget = preview.Target as PlayerCharacter;
                     stabilizeTarget?.Heal(ability.PowerAmount);
-                    notificationUI?.ShowMessage($"{caster.DisplayName} стабилизирует союзника.");
+                    FlashTarget(stabilizeTarget, GetAbilityColor(ability));
+                    notificationUI?.ShowMessage($"{caster.DisplayName}: {ability.DisplayName}");
                     break;
             }
+        }
+
+        private static void FlashTarget(Component target, Color color)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            var flash = target.GetComponent<AbilityTargetFlash>();
+            if (flash == null)
+            {
+                flash = target.gameObject.AddComponent<AbilityTargetFlash>();
+            }
+
+            flash.Play(color, 0.45f);
+        }
+
+        public static Color GetAbilityColor(AbilityData ability)
+        {
+            if (ability == null)
+            {
+                return Color.white;
+            }
+
+            if (ability.Id != null && ability.Id.StartsWith("dax"))
+            {
+                return new Color(1f, 0.62f, 0.16f);
+            }
+
+            if (ability.Id != null && ability.Id.StartsWith("nyra"))
+            {
+                return new Color(0.2f, 0.72f, 1f);
+            }
+
+            if (ability.Id != null && ability.Id.StartsWith("cormac"))
+            {
+                return new Color(0.34f, 0.9f, 0.42f);
+            }
+
+            return Color.white;
         }
 
         private Enemy FindEnemyTarget(PlayerCharacter caster, float range)

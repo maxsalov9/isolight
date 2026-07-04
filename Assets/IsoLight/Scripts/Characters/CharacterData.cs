@@ -12,6 +12,9 @@ namespace IsoLight.Characters
         public Sprite Portrait;
         public int MaxHealth = 100;
         public int MaxEnergy = 50;
+        public int AttackDamage = 16;
+        public float AttackRange = 6f;
+        public float AttackCooldown = 1f;
         public List<AbilityData> Abilities = new List<AbilityData>();
     }
 }

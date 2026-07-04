@@ -18,6 +18,8 @@ namespace IsoLight.Characters
         [SerializeField] private float attackRange = 6f;
         [SerializeField] private float attackCooldown = 0.75f;
 
+        private static readonly IReadOnlyList<AbilityData> NoAbilities = Array.Empty<AbilityData>();
+
         private NavMeshAgent navMeshAgent;
         private float nextAttackTime;
         private readonly Dictionary<string, float> abilityReadyTimes = new Dictionary<string, float>();
@@ -34,7 +36,10 @@ namespace IsoLight.Characters
         public int CurrentEnergy => currentEnergy;
         public bool IsAlive => currentHealth > 0;
         public bool IsSelected => isSelected;
-        public IReadOnlyList<AbilityData> Abilities => characterData != null ? characterData.Abilities : Array.Empty<AbilityData>();
+        public int AttackDamage => characterData != null ? characterData.AttackDamage : attackDamage;
+        public float AttackRange => characterData != null ? characterData.AttackRange : attackRange;
+        public float AttackCooldown => characterData != null ? characterData.AttackCooldown : attackCooldown;
+        public IReadOnlyList<AbilityData> Abilities => characterData != null ? characterData.Abilities : NoAbilities;
 
         private void Awake()
         {
@@ -110,7 +115,7 @@ namespace IsoLight.Characters
             }
 
             var distance = Vector3.Distance(transform.position, targetComponent.transform.position);
-            if (distance > attackRange)
+            if (distance > AttackRange)
             {
                 MoveTo(targetComponent.transform.position);
                 return false;
@@ -121,8 +126,8 @@ namespace IsoLight.Characters
                 navMeshAgent.ResetPath();
             }
 
-            target.TakeDamage(attackDamage);
-            nextAttackTime = Time.time + attackCooldown;
+            target.TakeDamage(AttackDamage);
+            nextAttackTime = Time.time + AttackCooldown;
             return true;
         }
 

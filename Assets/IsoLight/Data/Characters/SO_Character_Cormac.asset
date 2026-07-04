@@ -16,8 +16,11 @@ MonoBehaviour:
   DisplayName: Cormac
   Role: "\u041C\u0435\u0434\u0438\u043A"
   Portrait: {fileID: 0}
-  MaxHealth: 95
-  MaxEnergy: 65
+  MaxHealth: 110
+  MaxEnergy: 75
+  AttackDamage: 12
+  AttackRange: 6
+  AttackCooldown: 1.15
   Abilities:
   - {fileID: 11400000, guid: 71eff5be138940189a4fe53de050c0a0, type: 2}
   - {fileID: 11400000, guid: a7422b358d504c0b903c92e236dc826c, type: 2}

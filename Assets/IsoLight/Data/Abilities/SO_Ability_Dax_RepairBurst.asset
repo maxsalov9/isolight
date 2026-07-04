@@ -16,10 +16,10 @@ MonoBehaviour:
   DisplayName: Repair Burst
   Description: "\u0427\u0438\u043D\u0438\u0442 Generator G-17."
   Icon: {fileID: 0}
-  Cooldown: 7
-  EnergyCost: 12
+  Cooldown: 8
+  EnergyCost: 14
   TargetType: 4
   EffectType: 1
-  PowerAmount: 45
-  Range: 6
+  PowerAmount: 75
+  Range: 7
   StunDuration: 0

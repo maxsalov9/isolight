@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: raider_saboteur
   DisplayName: Raider Saboteur
-  MaxHealth: 50
-  Damage: 10
-  AttackRange: 2.8
-  AttackCooldown: 1.4
-  MoveSpeed: 3.1
+  MaxHealth: 85
+  Damage: 16
+  AttackRange: 2.6
+  AttackCooldown: 2.4
+  MoveSpeed: 2.85
   Role: 3

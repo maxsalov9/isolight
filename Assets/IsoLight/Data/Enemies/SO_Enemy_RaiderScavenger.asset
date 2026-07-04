@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: raider_scavenger
   DisplayName: Raider Scavenger
-  MaxHealth: 45
-  Damage: 8
-  AttackRange: 5
-  AttackCooldown: 1.6
-  MoveSpeed: 2.6
+  MaxHealth: 70
+  Damage: 7
+  AttackRange: 5.8
+  AttackCooldown: 2.2
+  MoveSpeed: 2.35
   Role: 0

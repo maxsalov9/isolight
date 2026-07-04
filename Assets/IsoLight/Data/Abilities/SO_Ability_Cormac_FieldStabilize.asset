@@ -17,10 +17,10 @@ MonoBehaviour:
   Description: "\u041D\u0435\u0431\u043E\u043B\u044C\u0448\u0430\u044F \u0441\u0442\u0430\u0431\u0438\u043B\u0438\u0437\u0430\u0446\u0438\u044F
     HP."
   Icon: {fileID: 0}
-  Cooldown: 6
-  EnergyCost: 10
+  Cooldown: 7
+  EnergyCost: 12
   TargetType: 1
   EffectType: 4
-  PowerAmount: 20
-  Range: 7
+  PowerAmount: 28
+  Range: 8
   StunDuration: 0

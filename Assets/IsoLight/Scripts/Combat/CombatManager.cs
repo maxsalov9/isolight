@@ -137,8 +137,8 @@ namespace IsoLight.Combat
                 return;
             }
 
-            notificationUI?.ShowMessage("Генератор уничтожен — столкновение нужно переиграть.");
-            EndCombat(false, "Generator G-17 уничтожен. Riverside остается без питания, столкновение нужно переиграть.");
+            notificationUI?.ShowMessage("Генератор уничтожен. Схватка провалена.");
+            EndCombat(false, "Генератор уничтожен. Схватка провалена. Перезапустите столкновение или сцену для повторного playtest.");
         }
 
         private void SpawnEnemies()
@@ -164,13 +164,12 @@ namespace IsoLight.Combat
             enemyObject.name = data.DisplayName;
             enemyObject.transform.SetParent(enemyParent);
             enemyObject.transform.position = position;
+            enemyObject.transform.localScale = GetEnemyScale(data.Role);
 
             var renderer = enemyObject.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.material.color = data.Role == EnemyRole.Saboteur
-                    ? new Color(0.72f, 0.12f, 0.08f)
-                    : new Color(0.42f, 0.24f, 0.18f);
+                renderer.material.color = GetEnemyColor(data.Role);
             }
 
             var agent = enemyObject.AddComponent<NavMeshAgent>();
@@ -184,10 +183,59 @@ namespace IsoLight.Combat
             enemy.Initialize(data, this);
 
             var ai = enemyObject.AddComponent<EnemyAI>();
-            ai.SetReferences(this, partyManager, generator);
+            ai.SetReferences(this, partyManager, generator, notificationUI);
+            AddEnemyRoleMarker(enemyObject, data.Role);
             enemyObject.AddComponent<EnemyHealthBarUI>();
 
             return enemy;
+        }
+
+        private static Color GetEnemyColor(EnemyRole role)
+        {
+            return role switch
+            {
+                EnemyRole.Gunner => new Color(0.33f, 0.22f, 0.17f),
+                EnemyRole.Runner => new Color(0.52f, 0.34f, 0.21f),
+                EnemyRole.Saboteur => new Color(0.82f, 0.08f, 0.04f),
+                _ => new Color(0.42f, 0.24f, 0.18f)
+            };
+        }
+
+        private static Vector3 GetEnemyScale(EnemyRole role)
+        {
+            return role switch
+            {
+                EnemyRole.Gunner => new Vector3(1.18f, 1.08f, 1.18f),
+                EnemyRole.Runner => new Vector3(0.86f, 1f, 0.86f),
+                EnemyRole.Saboteur => new Vector3(1.12f, 1.15f, 1.12f),
+                _ => Vector3.one
+            };
+        }
+
+        private static void AddEnemyRoleMarker(GameObject enemyObject, EnemyRole role)
+        {
+            if (enemyObject == null || role != EnemyRole.Saboteur)
+            {
+                return;
+            }
+
+            var marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            marker.name = "Saboteur_GeneratorThreatMarker";
+            marker.transform.SetParent(enemyObject.transform, false);
+            marker.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+            marker.transform.localScale = new Vector3(0.42f, 0.12f, 0.42f);
+
+            var markerRenderer = marker.GetComponent<Renderer>();
+            if (markerRenderer != null)
+            {
+                markerRenderer.material.color = new Color(1f, 0.08f, 0.02f);
+            }
+
+            var markerCollider = marker.GetComponent<Collider>();
+            if (markerCollider != null)
+            {
+                Destroy(markerCollider);
+            }
         }
 
         private void RegisterEnemy(Enemy enemy)
@@ -207,7 +255,7 @@ namespace IsoLight.Combat
             {
                 enemy.Died -= HandleEnemyDied;
                 livingEnemies.Remove(enemy);
-                notificationUI?.ShowMessage($"{enemy.name} уничтожен.");
+                notificationUI?.ShowMessage($"Враг уничтожен: {enemy.name}.");
             }
 
             if (FocusedEnemy == enemy)

@@ -2,6 +2,7 @@ using IsoLight.Characters;
 using IsoLight.Combat;
 using IsoLight.Party;
 using IsoLight.Power;
+using IsoLight.UI;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -18,8 +19,11 @@ namespace IsoLight.Enemies
         private CombatManager combatManager;
         private PartyManager partyManager;
         private GeneratorG17 generator;
+        private NotificationUI notificationUI;
         private float nextAttackTime;
         private float stunnedUntilTime;
+        private float nextSaboteurAtGeneratorNoticeTime;
+        private bool hasWarnedSaboteurApproach;
 
         public EnemyState CurrentState => currentState;
 
@@ -29,11 +33,12 @@ namespace IsoLight.Enemies
             navMeshAgent = GetComponent<NavMeshAgent>();
         }
 
-        public void SetReferences(CombatManager combat, PartyManager party, GeneratorG17 targetGenerator)
+        public void SetReferences(CombatManager combat, PartyManager party, GeneratorG17 targetGenerator, NotificationUI notifications = null)
         {
             combatManager = combat;
             partyManager = party;
             generator = targetGenerator;
+            notificationUI = notifications;
         }
 
         private void Update()
@@ -63,6 +68,12 @@ namespace IsoLight.Enemies
 
             if (enemy.Role == EnemyRole.Saboteur && generator != null && generator.IsAlive)
             {
+                if (!hasWarnedSaboteurApproach)
+                {
+                    notificationUI?.ShowMessage("Рейдер пытается повредить Generator G-17!");
+                    hasWarnedSaboteurApproach = true;
+                }
+
                 TickAgainstTarget(generator, generator.transform, EnemyState.SabotageGenerator);
                 return;
             }
@@ -98,6 +109,12 @@ namespace IsoLight.Enemies
             currentState = attackState;
             if (Time.time >= nextAttackTime)
             {
+                if (attackState == EnemyState.SabotageGenerator && Time.time >= nextSaboteurAtGeneratorNoticeTime)
+                {
+                    notificationUI?.ShowMessage("Saboteur у генератора!");
+                    nextSaboteurAtGeneratorNoticeTime = Time.time + 5f;
+                }
+
                 damageable.TakeDamage(enemy.Damage);
                 nextAttackTime = Time.time + enemy.AttackCooldown;
             }

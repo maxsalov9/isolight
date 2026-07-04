@@ -16,8 +16,11 @@ MonoBehaviour:
   DisplayName: Dax
   Role: "\u041F\u0440\u0430\u043A\u0442\u0438\u043A"
   Portrait: {fileID: 0}
-  MaxHealth: 100
-  MaxEnergy: 50
+  MaxHealth: 120
+  MaxEnergy: 60
+  AttackDamage: 16
+  AttackRange: 6.5
+  AttackCooldown: 1
   Abilities:
   - {fileID: 11400000, guid: 9e1f72b03752445ab7ea70af2c2fd101, type: 2}
   - {fileID: 11400000, guid: b91e24753dbf48a4954af36fbd358c24, type: 2}

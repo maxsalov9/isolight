@@ -93,6 +93,7 @@ namespace IsoLight.Editor
             powerManager.SetPowerSystems(powerSystemAssets);
             abilityController.SetReferences(gameManager, partyManager, combatManager, generator, uiRefs.NotificationUI);
             uiRefs.AbilityBarUI.SetReferences(gameManager, partyManager, abilityController);
+            uiRefs.AbilityTargetIndicatorUI.SetReferences(gameManager, partyManager, abilityController);
             uiRefs.MissionHintNotifier.SetReferences(questManager, uiRefs.NotificationUI);
             uiRefs.FailurePanelUI.SetCombatManager(combatManager);
             uiRefs.PlaytestDebugPanelUI.SetReferences(gameManager, questManager, combatManager, powerManager, generator, uiRefs.NotificationUI);
@@ -168,6 +169,7 @@ namespace IsoLight.Editor
             public GeneratorStatusUI GeneratorStatusUI;
             public PartyHUDUI PartyHUDUI;
             public AbilityBarUI AbilityBarUI;
+            public AbilityTargetIndicatorUI AbilityTargetIndicatorUI;
             public MissionHintNotifier MissionHintNotifier;
             public FailurePanelUI FailurePanelUI;
             public PlaytestDebugPanelUI PlaytestDebugPanelUI;
@@ -297,6 +299,10 @@ namespace IsoLight.Editor
             abilityBarObject.transform.SetParent(parent);
             var abilityBar = abilityBarObject.AddComponent<AbilityBarUI>();
 
+            var abilityTargetObject = new GameObject("AbilityTargetIndicatorUI");
+            abilityTargetObject.transform.SetParent(parent);
+            var abilityTargetIndicator = abilityTargetObject.AddComponent<AbilityTargetIndicatorUI>();
+
             var hintObject = new GameObject("MissionHintNotifier");
             hintObject.transform.SetParent(parent);
             var missionHintNotifier = hintObject.AddComponent<MissionHintNotifier>();
@@ -321,6 +327,7 @@ namespace IsoLight.Editor
                 GeneratorStatusUI = generatorStatus,
                 PartyHUDUI = partyHud,
                 AbilityBarUI = abilityBar,
+                AbilityTargetIndicatorUI = abilityTargetIndicator,
                 MissionHintNotifier = missionHintNotifier,
                 FailurePanelUI = failurePanel,
                 PlaytestDebugPanelUI = debugPanel
@@ -845,8 +852,11 @@ namespace IsoLight.Editor
                         "dax",
                         "Dax",
                         "Практик",
-                        100,
-                        50,
+                        120,
+                        60,
+                        16,
+                        6.5f,
+                        1f,
                         GetAbilities(abilityAssets, "dax_repair_burst", "dax_suppressive_shot")),
                     new Vector3(-2f, 0f, 0f),
                     materials.WarmLightSource,
@@ -858,8 +868,11 @@ namespace IsoLight.Editor
                         "nyra",
                         "Nyra",
                         "Техник",
+                        95,
                         85,
-                        80,
+                        13,
+                        7f,
+                        1f,
                         GetAbilities(abilityAssets, "nyra_shock_pulse", "nyra_overload_panel")),
                     new Vector3(0f, 0f, 0f),
                     materials.TechBlue,
@@ -871,8 +884,11 @@ namespace IsoLight.Editor
                         "cormac",
                         "Cormac",
                         "Медик",
-                        95,
-                        65,
+                        110,
+                        75,
+                        12,
+                        6f,
+                        1.15f,
                         GetAbilities(abilityAssets, "cormac_emergency_heal", "cormac_field_stabilize")),
                     new Vector3(2f, 0f, 0f),
                     materials.DeadVegetation,
@@ -1109,6 +1125,7 @@ namespace IsoLight.Editor
 
             var generator = generatorObject.AddComponent<GeneratorG17>();
             generator.Configure("Починить / запустить Generator G-17", "[Клик]", 5f);
+            generator.ConfigureStats(420);
             generator.SetReferences(gameManager, combatManager, questManager, notificationUI);
             AddQuestMarker(
                 generatorObject,
@@ -1249,23 +1266,23 @@ namespace IsoLight.Editor
                     "dax_repair_burst",
                     "Repair Burst",
                     "Чинит Generator G-17.",
-                    7f,
-                    12,
+                    8f,
+                    14,
                     AbilityTargetType.Interactable,
                     AbilityEffectType.RepairGenerator,
-                    45,
-                    6f,
+                    75,
+                    7f,
                     0f),
                 ["dax_suppressive_shot"] = EnsureAbilityDataAsset(
                     "SO_Ability_Dax_SuppressiveShot",
                     "dax_suppressive_shot",
                     "Suppressive Shot",
                     "Сильный выстрел по врагу.",
-                    4.5f,
-                    10,
+                    6f,
+                    12,
                     AbilityTargetType.Enemy,
                     AbilityEffectType.DamageEnemy,
-                    34,
+                    38,
                     9f,
                     0f),
                 ["nyra_shock_pulse"] = EnsureAbilityDataAsset(
@@ -1273,48 +1290,48 @@ namespace IsoLight.Editor
                     "nyra_shock_pulse",
                     "Shock Pulse",
                     "Урон и короткий сбой врага.",
-                    6f,
-                    14,
-                    AbilityTargetType.Enemy,
-                    AbilityEffectType.ShockEnemy,
-                    24,
-                    8f,
-                    2f),
-                ["nyra_overload_panel"] = EnsureAbilityDataAsset(
-                    "SO_Ability_Nyra_OverloadPanel",
-                    "nyra_overload_panel",
-                    "Overload Panel",
-                    "Перегружает ближайшую цель.",
                     7f,
                     16,
                     AbilityTargetType.Enemy,
                     AbilityEffectType.ShockEnemy,
                     30,
-                    8f,
-                    1.2f),
+                    9f,
+                    2.5f),
+                ["nyra_overload_panel"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Nyra_OverloadPanel",
+                    "nyra_overload_panel",
+                    "Overload Panel",
+                    "Прототип: второй импульс по ближайшей цели.",
+                    9f,
+                    18,
+                    AbilityTargetType.Enemy,
+                    AbilityEffectType.ShockEnemy,
+                    36,
+                    9f,
+                    1.5f),
                 ["cormac_emergency_heal"] = EnsureAbilityDataAsset(
                     "SO_Ability_Cormac_EmergencyHeal",
                     "cormac_emergency_heal",
                     "Emergency Heal",
                     "Лечит самого раненого союзника.",
-                    8f,
-                    14,
+                    9f,
+                    16,
                     AbilityTargetType.Ally,
                     AbilityEffectType.HealAlly,
-                    35,
-                    7f,
+                    45,
+                    8f,
                     0f),
                 ["cormac_field_stabilize"] = EnsureAbilityDataAsset(
                     "SO_Ability_Cormac_FieldStabilize",
                     "cormac_field_stabilize",
                     "Field Stabilize",
                     "Небольшая стабилизация HP.",
-                    6f,
-                    10,
+                    7f,
+                    12,
                     AbilityTargetType.Ally,
                     AbilityEffectType.StabilizeAlly,
-                    20,
-                    7f,
+                    28,
+                    8f,
                     0f)
             };
 
@@ -1398,6 +1415,9 @@ namespace IsoLight.Editor
             string role,
             int maxHealth,
             int maxEnergy,
+            int attackDamage,
+            float attackRange,
+            float attackCooldown,
             List<AbilityData> abilities)
         {
             var path = $"{CharacterDataPath}/{assetName}.asset";
@@ -1414,6 +1434,9 @@ namespace IsoLight.Editor
             characterData.Role = role;
             characterData.MaxHealth = maxHealth;
             characterData.MaxEnergy = maxEnergy;
+            characterData.AttackDamage = attackDamage;
+            characterData.AttackRange = attackRange;
+            characterData.AttackCooldown = attackCooldown;
             characterData.Abilities.Clear();
             if (abilities != null)
             {
@@ -1430,41 +1453,41 @@ namespace IsoLight.Editor
                 "SO_Enemy_RaiderScavenger",
                 "raider_scavenger",
                 "Raider Scavenger",
-                45,
-                8,
-                5f,
-                1.6f,
-                2.6f,
+                70,
+                7,
+                5.8f,
+                2.2f,
+                2.35f,
                 EnemyRole.Scavenger);
             var gunner = EnsureEnemyDataAsset(
                 "SO_Enemy_RaiderGunner",
                 "raider_gunner",
                 "Raider Gunner",
-                60,
+                95,
                 12,
-                7f,
-                2.1f,
-                2.2f,
+                7.5f,
+                2.6f,
+                1.9f,
                 EnemyRole.Gunner);
             var runner = EnsureEnemyDataAsset(
                 "SO_Enemy_RaiderRunner",
                 "raider_runner",
                 "Raider Runner",
-                38,
-                7,
+                65,
+                8,
                 3.2f,
-                1.1f,
-                3.8f,
+                1.8f,
+                3.5f,
                 EnemyRole.Runner);
             var saboteur = EnsureEnemyDataAsset(
                 "SO_Enemy_RaiderSaboteur",
                 "raider_saboteur",
                 "Raider Saboteur",
-                50,
-                10,
-                2.8f,
-                1.4f,
-                3.1f,
+                85,
+                16,
+                2.6f,
+                2.4f,
+                2.85f,
                 EnemyRole.Saboteur);
 
             return new List<EnemyData>

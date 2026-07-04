@@ -48,7 +48,7 @@ namespace IsoLight.UI
 
             if (!generator.IsAlive)
             {
-                GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 66f, panelRect.width - 24f, 40f), "Генератор уничтожен. Столкновение нужно переиграть.", warningStyle);
+                GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 66f, panelRect.width - 24f, 40f), "Генератор уничтожен. Схватка провалена.", warningStyle);
             }
             else if (generator.WasRecentlyDamaged)
             {
