@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4c4d2f7a2d34a90af7a97fd4b5b2a61, type: 3}
+  m_Name: SO_Ability_Dax_RepairBurst
+  m_EditorClassIdentifier: 
+  Id: dax_repair_burst
+  DisplayName: Repair Burst
+  Description: "\u0427\u0438\u043D\u0438\u0442 Generator G-17."
+  Icon: {fileID: 0}
+  Cooldown: 7
+  EnergyCost: 12
+  TargetType: 4
+  EffectType: 1
+  PowerAmount: 45
+  Range: 6
+  StunDuration: 0

@@ -19,6 +19,7 @@ namespace IsoLight.Enemies
         private PartyManager partyManager;
         private GeneratorG17 generator;
         private float nextAttackTime;
+        private float stunnedUntilTime;
 
         public EnemyState CurrentState => currentState;
 
@@ -46,6 +47,17 @@ namespace IsoLight.Enemies
             if (combatManager == null || !combatManager.IsCombatActive)
             {
                 currentState = EnemyState.Idle;
+                return;
+            }
+
+            if (Time.time < stunnedUntilTime)
+            {
+                currentState = EnemyState.Idle;
+                if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+                {
+                    navMeshAgent.isStopped = true;
+                }
+
                 return;
             }
 
@@ -134,6 +146,21 @@ namespace IsoLight.Enemies
 
             navMeshAgent.isStopped = false;
             navMeshAgent.SetDestination(destination);
+        }
+
+        public void StunFor(float duration)
+        {
+            if (duration <= 0f)
+            {
+                return;
+            }
+
+            stunnedUntilTime = Mathf.Max(stunnedUntilTime, Time.time + duration);
+            nextAttackTime = Mathf.Max(nextAttackTime, stunnedUntilTime);
+            if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.isStopped = true;
+            }
         }
     }
 }

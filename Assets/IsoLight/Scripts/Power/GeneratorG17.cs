@@ -107,6 +107,16 @@ namespace IsoLight.Power
             }
         }
 
+        public void RepairHealth(int amount)
+        {
+            if (amount <= 0 || !IsAlive)
+            {
+                return;
+            }
+
+            currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        }
+
         public void DebugRepairForPlaytest()
         {
             CacheReferences();

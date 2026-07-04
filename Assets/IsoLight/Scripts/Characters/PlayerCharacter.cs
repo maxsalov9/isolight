@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using IsoLight.Combat;
 using UnityEngine;
 using UnityEngine.AI;
@@ -19,6 +20,7 @@ namespace IsoLight.Characters
 
         private NavMeshAgent navMeshAgent;
         private float nextAttackTime;
+        private readonly Dictionary<string, float> abilityReadyTimes = new Dictionary<string, float>();
 
         public event Action<PlayerCharacter> StatsChanged;
         public event Action<PlayerCharacter, bool> SelectionChanged;
@@ -32,6 +34,7 @@ namespace IsoLight.Characters
         public int CurrentEnergy => currentEnergy;
         public bool IsAlive => currentHealth > 0;
         public bool IsSelected => isSelected;
+        public IReadOnlyList<AbilityData> Abilities => characterData != null ? characterData.Abilities : Array.Empty<AbilityData>();
 
         private void Awake()
         {
@@ -123,6 +126,58 @@ namespace IsoLight.Characters
             return true;
         }
 
+        public bool TryBeginAbility(AbilityData ability, out string failureReason)
+        {
+            failureReason = null;
+
+            if (!IsAlive)
+            {
+                failureReason = $"{DisplayName} не может действовать.";
+                return false;
+            }
+
+            if (ability == null)
+            {
+                failureReason = "Способность не назначена.";
+                return false;
+            }
+
+            if (currentEnergy < ability.EnergyCost)
+            {
+                failureReason = "Недостаточно энергии.";
+                return false;
+            }
+
+            var cooldownRemaining = GetAbilityCooldownRemaining(ability);
+            if (cooldownRemaining > 0f)
+            {
+                failureReason = $"Способность перезаряжается: {cooldownRemaining:0.0} сек.";
+                return false;
+            }
+
+            currentEnergy -= ability.EnergyCost;
+            abilityReadyTimes[ability.Id] = Time.time + Mathf.Max(0f, ability.Cooldown);
+            StatsChanged?.Invoke(this);
+            return true;
+        }
+
+        public float GetAbilityCooldownRemaining(AbilityData ability)
+        {
+            if (ability == null || string.IsNullOrEmpty(ability.Id))
+            {
+                return 0f;
+            }
+
+            return abilityReadyTimes.TryGetValue(ability.Id, out var readyTime)
+                ? Mathf.Max(0f, readyTime - Time.time)
+                : 0f;
+        }
+
+        public bool HasEnoughEnergy(AbilityData ability)
+        {
+            return ability != null && currentEnergy >= ability.EnergyCost;
+        }
+
         public void TakeDamage(int amount)
         {
             if (amount <= 0)
@@ -147,6 +202,17 @@ namespace IsoLight.Characters
             }
 
             currentHealth = Mathf.Min(characterData.MaxHealth, currentHealth + amount);
+            StatsChanged?.Invoke(this);
+        }
+
+        public void RestoreEnergy(int amount)
+        {
+            if (amount <= 0 || characterData == null)
+            {
+                return;
+            }
+
+            currentEnergy = Mathf.Min(characterData.MaxEnergy, currentEnergy + amount);
             StatsChanged?.Invoke(this);
         }
 

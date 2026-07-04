@@ -30,6 +30,7 @@ namespace IsoLight.Combat
 
         public bool IsCombatActive { get; private set; }
         public int LivingEnemyCount => livingEnemies.Count;
+        public IReadOnlyList<Enemy> LivingEnemies => livingEnemies;
         public Enemy FocusedEnemy { get; private set; }
 
         public void SetReferences(

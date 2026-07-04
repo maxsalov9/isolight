@@ -11,15 +11,18 @@ namespace IsoLight.Camera
         [SerializeField] private Transform target;
         [SerializeField] private float followSpeed = 8f;
         [SerializeField] private float zoomSpeed = 4f;
-        [SerializeField] private float minZoom = 6f;
+        [SerializeField] private float cameraPitch = 63f;
+        [SerializeField] private float yaw = 45f;
+        [SerializeField] private float orthographicSize = 15f;
+        [SerializeField] private float minZoom = 10f;
         [SerializeField] private float maxZoom = 22f;
+        [SerializeField] private float followHeight = 0f;
+        [SerializeField] private float followDistance = 18.5f;
         [SerializeField] private Vector2 boundsMin = new Vector2(-25f, -25f);
         [SerializeField] private Vector2 boundsMax = new Vector2(25f, 25f);
-        [SerializeField] private Vector3 isometricRotation = new Vector3(60f, 45f, 0f);
-        [SerializeField] private Vector3 defaultOffset = new Vector3(-8f, 10f, -8f);
 
-        private float zoomDistance;
         private Vector3 manualPanOffset;
+        private UnityEngine.Camera controlledCamera;
 
         public Transform Target
         {
@@ -42,13 +45,66 @@ namespace IsoLight.Camera
         public float MinZoom
         {
             get => minZoom;
-            set => minZoom = Mathf.Max(0.01f, value);
+            set
+            {
+                minZoom = Mathf.Max(0.01f, value);
+                maxZoom = Mathf.Max(minZoom, maxZoom);
+                orthographicSize = Mathf.Clamp(orthographicSize, minZoom, maxZoom);
+                ApplyCameraSettings();
+            }
         }
 
         public float MaxZoom
         {
             get => maxZoom;
-            set => maxZoom = Mathf.Max(minZoom, value);
+            set
+            {
+                maxZoom = Mathf.Max(minZoom, value);
+                orthographicSize = Mathf.Clamp(orthographicSize, minZoom, maxZoom);
+                ApplyCameraSettings();
+            }
+        }
+
+        public float CameraPitch
+        {
+            get => cameraPitch;
+            set
+            {
+                cameraPitch = Mathf.Clamp(value, 25f, 89f);
+                ApplyCameraSettings();
+            }
+        }
+
+        public float Yaw
+        {
+            get => yaw;
+            set
+            {
+                yaw = value;
+                ApplyCameraSettings();
+            }
+        }
+
+        public float OrthographicSize
+        {
+            get => orthographicSize;
+            set
+            {
+                orthographicSize = Mathf.Clamp(value, minZoom, maxZoom);
+                ApplyCameraSettings();
+            }
+        }
+
+        public float FollowHeight
+        {
+            get => followHeight;
+            set => followHeight = Mathf.Max(0f, value);
+        }
+
+        public float FollowDistance
+        {
+            get => followDistance;
+            set => followDistance = Mathf.Max(1f, value);
         }
 
         public Vector2 BoundsMin
@@ -65,8 +121,32 @@ namespace IsoLight.Camera
 
         private void Awake()
         {
-            zoomDistance = Mathf.Clamp(defaultOffset.magnitude, minZoom, maxZoom);
-            transform.rotation = Quaternion.Euler(isometricRotation);
+            controlledCamera = GetComponent<UnityEngine.Camera>();
+            ApplyCameraSettings();
+        }
+
+        private void OnValidate()
+        {
+            minZoom = Mathf.Max(0.01f, minZoom);
+            maxZoom = Mathf.Max(minZoom, maxZoom);
+            cameraPitch = Mathf.Clamp(cameraPitch, 25f, 89f);
+            orthographicSize = Mathf.Clamp(orthographicSize, minZoom, maxZoom);
+            followHeight = Mathf.Max(0f, followHeight);
+            followDistance = Mathf.Max(1f, followDistance);
+            controlledCamera = GetComponent<UnityEngine.Camera>();
+            ApplyCameraSettings();
+        }
+
+        public void ConfigureView(float pitch, float viewYaw, float size, float minSize, float maxSize, float height, float distance)
+        {
+            minZoom = Mathf.Max(0.01f, minSize);
+            maxZoom = Mathf.Max(minZoom, maxSize);
+            cameraPitch = Mathf.Clamp(pitch, 25f, 89f);
+            yaw = viewYaw;
+            orthographicSize = Mathf.Clamp(size, minZoom, maxZoom);
+            followHeight = Mathf.Max(0f, height);
+            followDistance = Mathf.Max(1f, distance);
+            ApplyCameraSettings();
         }
 
         private void LateUpdate()
@@ -75,12 +155,14 @@ namespace IsoLight.Camera
             HandlePanInput();
 
             var anchor = target != null ? target.position : Vector3.zero;
-            var desiredPosition = anchor + manualPanOffset + defaultOffset.normalized * zoomDistance;
+            var rotation = Quaternion.Euler(cameraPitch, yaw, 0f);
+            var desiredPosition = anchor + manualPanOffset - rotation * Vector3.forward * followDistance + Vector3.up * followHeight;
             desiredPosition.x = Mathf.Clamp(desiredPosition.x, boundsMin.x, boundsMax.x);
             desiredPosition.z = Mathf.Clamp(desiredPosition.z, boundsMin.y, boundsMax.y);
 
             transform.position = Vector3.Lerp(transform.position, desiredPosition, followSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.Euler(isometricRotation);
+            transform.rotation = rotation;
+            ApplyCameraSettings();
         }
 
         private void HandleZoomInput()
@@ -98,7 +180,8 @@ namespace IsoLight.Camera
 
             if (Mathf.Abs(scroll) > Mathf.Epsilon)
             {
-                zoomDistance = Mathf.Clamp(zoomDistance - scroll * zoomSpeed * 0.01f, minZoom, maxZoom);
+                orthographicSize = Mathf.Clamp(orthographicSize - scroll * zoomSpeed * 0.05f, minZoom, maxZoom);
+                ApplyCameraSettings();
             }
         }
 
@@ -124,7 +207,23 @@ namespace IsoLight.Camera
             }
 
             var pan = new Vector3(input.x, 0f, input.y);
-            manualPanOffset += pan * (zoomDistance * 0.5f * Time.deltaTime);
+            manualPanOffset += pan * (orthographicSize * 0.55f * Time.deltaTime);
+        }
+
+        private void ApplyCameraSettings()
+        {
+            if (controlledCamera == null)
+            {
+                controlledCamera = GetComponent<UnityEngine.Camera>();
+            }
+
+            if (controlledCamera != null)
+            {
+                controlledCamera.orthographic = true;
+                controlledCamera.orthographicSize = orthographicSize;
+            }
+
+            transform.rotation = Quaternion.Euler(cameraPitch, yaw, 0f);
         }
 
         private static float ReadAxis(bool negativePressed, bool positivePressed)

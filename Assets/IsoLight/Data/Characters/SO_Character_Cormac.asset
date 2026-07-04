@@ -18,4 +18,6 @@ MonoBehaviour:
   Portrait: {fileID: 0}
   MaxHealth: 95
   MaxEnergy: 65
-  Abilities: []
+  Abilities:
+  - {fileID: 11400000, guid: 71eff5be138940189a4fe53de050c0a0, type: 2}
+  - {fileID: 11400000, guid: a7422b358d504c0b903c92e236dc826c, type: 2}

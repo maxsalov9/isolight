@@ -29,6 +29,7 @@ namespace IsoLight.Editor
         private const string EnemyDataPath = "Assets/IsoLight/Data/Enemies";
         private const string QuestDataPath = "Assets/IsoLight/Data/Quests";
         private const string DialogueDataPath = "Assets/IsoLight/Data/Dialogues";
+        private const string AbilityDataPath = "Assets/IsoLight/Data/Abilities";
         private const string PowerSystemDataPath = "Assets/IsoLight/Data/PowerSystems";
         private const string MaterialsPath = "Assets/IsoLight/Materials";
 
@@ -56,6 +57,7 @@ namespace IsoLight.Editor
             var dialogueManager = CreateManager<DialogueManager>("DialogueManager", gameRoot.transform);
             var combatManager = CreateManager<CombatManager>("CombatManager", gameRoot.transform);
             var powerManager = CreateManager<PowerManager>("PowerManager", gameRoot.transform);
+            var abilityController = CreateManager<AbilityController>("AbilityController", gameRoot.transform);
             var relationshipManager = CreateManager<RelationshipManager>("RelationshipManager", gameRoot.transform);
             var saveManager = CreateManager<SaveManager>("SaveManager", gameRoot.transform);
             var uiManager = CreateManager<UIManager>("UIManager", gameRoot.transform);
@@ -68,7 +70,8 @@ namespace IsoLight.Editor
 
             var cameraController = CreateMainCamera();
             var clickToMoveController = inputManager.gameObject.AddComponent<ClickToMoveController>();
-            var partyCharacters = CreatePlaceholderParty(playerPartyRoot.transform, materials);
+            var abilityAssets = EnsureAbilityAssets();
+            var partyCharacters = CreatePlaceholderParty(playerPartyRoot.transform, materials, abilityAssets);
             var questData = EnsureQuestDataAsset();
             var dialogueAssets = EnsureDialogueAssets(questData);
             var powerSystemAssets = EnsurePowerSystemAssets();
@@ -88,6 +91,8 @@ namespace IsoLight.Editor
             dialogueManager.SetReferences(gameManager, questManager, uiRefs.DialoguePanelUI);
             powerManager.SetReferences(gameManager, questManager, relationshipManager, uiRefs.PowerAllocationBoardUI, uiRefs.ResultPanelUI, resultVisualController);
             powerManager.SetPowerSystems(powerSystemAssets);
+            abilityController.SetReferences(gameManager, partyManager, combatManager, generator, uiRefs.NotificationUI);
+            uiRefs.AbilityBarUI.SetReferences(gameManager, partyManager, abilityController);
             uiRefs.MissionHintNotifier.SetReferences(questManager, uiRefs.NotificationUI);
             uiRefs.FailurePanelUI.SetCombatManager(combatManager);
             uiRefs.PlaytestDebugPanelUI.SetReferences(gameManager, questManager, combatManager, powerManager, generator, uiRefs.NotificationUI);
@@ -162,6 +167,7 @@ namespace IsoLight.Editor
             public CombatStatusUI CombatStatusUI;
             public GeneratorStatusUI GeneratorStatusUI;
             public PartyHUDUI PartyHUDUI;
+            public AbilityBarUI AbilityBarUI;
             public MissionHintNotifier MissionHintNotifier;
             public FailurePanelUI FailurePanelUI;
             public PlaytestDebugPanelUI PlaytestDebugPanelUI;
@@ -287,6 +293,10 @@ namespace IsoLight.Editor
             partyHudObject.transform.SetParent(parent);
             var partyHud = partyHudObject.AddComponent<PartyHUDUI>();
 
+            var abilityBarObject = new GameObject("AbilityBarUI");
+            abilityBarObject.transform.SetParent(parent);
+            var abilityBar = abilityBarObject.AddComponent<AbilityBarUI>();
+
             var hintObject = new GameObject("MissionHintNotifier");
             hintObject.transform.SetParent(parent);
             var missionHintNotifier = hintObject.AddComponent<MissionHintNotifier>();
@@ -310,6 +320,7 @@ namespace IsoLight.Editor
                 CombatStatusUI = combatStatus,
                 GeneratorStatusUI = generatorStatus,
                 PartyHUDUI = partyHud,
+                AbilityBarUI = abilityBar,
                 MissionHintNotifier = missionHintNotifier,
                 FailurePanelUI = failurePanel,
                 PlaytestDebugPanelUI = debugPanel
@@ -808,36 +819,61 @@ namespace IsoLight.Editor
         {
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
-            cameraObject.transform.position = new Vector3(-8f, 10f, -8f);
-            cameraObject.transform.rotation = Quaternion.Euler(60f, 45f, 0f);
+            cameraObject.transform.position = new Vector3(-8.8f, 16.5f, -8.8f);
+            cameraObject.transform.rotation = Quaternion.Euler(63f, 45f, 0f);
 
             var camera = cameraObject.AddComponent<UnityEngine.Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 15f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 200f;
 
             cameraObject.AddComponent<AudioListener>();
-            return cameraObject.AddComponent<IsometricCameraController>();
+            var cameraController = cameraObject.AddComponent<IsometricCameraController>();
+            cameraController.ConfigureView(63f, 45f, 15f, 10f, 22f, 0f, 18.5f);
+            return cameraController;
         }
 
-        private static List<PlayerCharacter> CreatePlaceholderParty(Transform parent, MinimalMaterials materials)
+        private static List<PlayerCharacter> CreatePlaceholderParty(Transform parent, MinimalMaterials materials, Dictionary<string, AbilityData> abilityAssets)
         {
             return new List<PlayerCharacter>
             {
                 CreatePlaceholderCharacter(
                     parent,
-                    EnsureCharacterDataAsset("SO_Character_Dax", "dax", "Dax", "Практик", 100, 50),
+                    EnsureCharacterDataAsset(
+                        "SO_Character_Dax",
+                        "dax",
+                        "Dax",
+                        "Практик",
+                        100,
+                        50,
+                        GetAbilities(abilityAssets, "dax_repair_burst", "dax_suppressive_shot")),
                     new Vector3(-2f, 0f, 0f),
                     materials.WarmLightSource,
                     materials),
                 CreatePlaceholderCharacter(
                     parent,
-                    EnsureCharacterDataAsset("SO_Character_Nyra", "nyra", "Nyra", "Техник", 85, 80),
+                    EnsureCharacterDataAsset(
+                        "SO_Character_Nyra",
+                        "nyra",
+                        "Nyra",
+                        "Техник",
+                        85,
+                        80,
+                        GetAbilities(abilityAssets, "nyra_shock_pulse", "nyra_overload_panel")),
                     new Vector3(0f, 0f, 0f),
                     materials.TechBlue,
                     materials),
                 CreatePlaceholderCharacter(
                     parent,
-                    EnsureCharacterDataAsset("SO_Character_Cormac", "cormac", "Cormac", "Медик", 95, 65),
+                    EnsureCharacterDataAsset(
+                        "SO_Character_Cormac",
+                        "cormac",
+                        "Cormac",
+                        "Медик",
+                        95,
+                        65,
+                        GetAbilities(abilityAssets, "cormac_emergency_heal", "cormac_field_stabilize")),
                     new Vector3(2f, 0f, 0f),
                     materials.DeadVegetation,
                     materials)
@@ -1202,13 +1238,167 @@ namespace IsoLight.Editor
             return marker;
         }
 
+        private static Dictionary<string, AbilityData> EnsureAbilityAssets()
+        {
+            EnsureAssetFolder(AbilityDataPath);
+
+            var abilities = new Dictionary<string, AbilityData>
+            {
+                ["dax_repair_burst"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Dax_RepairBurst",
+                    "dax_repair_burst",
+                    "Repair Burst",
+                    "Чинит Generator G-17.",
+                    7f,
+                    12,
+                    AbilityTargetType.Interactable,
+                    AbilityEffectType.RepairGenerator,
+                    45,
+                    6f,
+                    0f),
+                ["dax_suppressive_shot"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Dax_SuppressiveShot",
+                    "dax_suppressive_shot",
+                    "Suppressive Shot",
+                    "Сильный выстрел по врагу.",
+                    4.5f,
+                    10,
+                    AbilityTargetType.Enemy,
+                    AbilityEffectType.DamageEnemy,
+                    34,
+                    9f,
+                    0f),
+                ["nyra_shock_pulse"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Nyra_ShockPulse",
+                    "nyra_shock_pulse",
+                    "Shock Pulse",
+                    "Урон и короткий сбой врага.",
+                    6f,
+                    14,
+                    AbilityTargetType.Enemy,
+                    AbilityEffectType.ShockEnemy,
+                    24,
+                    8f,
+                    2f),
+                ["nyra_overload_panel"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Nyra_OverloadPanel",
+                    "nyra_overload_panel",
+                    "Overload Panel",
+                    "Перегружает ближайшую цель.",
+                    7f,
+                    16,
+                    AbilityTargetType.Enemy,
+                    AbilityEffectType.ShockEnemy,
+                    30,
+                    8f,
+                    1.2f),
+                ["cormac_emergency_heal"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Cormac_EmergencyHeal",
+                    "cormac_emergency_heal",
+                    "Emergency Heal",
+                    "Лечит самого раненого союзника.",
+                    8f,
+                    14,
+                    AbilityTargetType.Ally,
+                    AbilityEffectType.HealAlly,
+                    35,
+                    7f,
+                    0f),
+                ["cormac_field_stabilize"] = EnsureAbilityDataAsset(
+                    "SO_Ability_Cormac_FieldStabilize",
+                    "cormac_field_stabilize",
+                    "Field Stabilize",
+                    "Небольшая стабилизация HP.",
+                    6f,
+                    10,
+                    AbilityTargetType.Ally,
+                    AbilityEffectType.StabilizeAlly,
+                    20,
+                    7f,
+                    0f)
+            };
+
+            return abilities;
+        }
+
+        private static AbilityData EnsureAbilityDataAsset(
+            string assetName,
+            string id,
+            string displayName,
+            string description,
+            float cooldown,
+            int energyCost,
+            AbilityTargetType targetType,
+            AbilityEffectType effectType,
+            int powerAmount,
+            float range,
+            float stunDuration)
+        {
+            var path = $"{AbilityDataPath}/{assetName}.asset";
+            var abilityData = AssetDatabase.LoadAssetAtPath<AbilityData>(path);
+
+            if (abilityData == null)
+            {
+                abilityData = ScriptableObject.CreateInstance<AbilityData>();
+                AssetDatabase.CreateAsset(abilityData, path);
+            }
+
+            abilityData.Id = id;
+            abilityData.DisplayName = displayName;
+            abilityData.Description = description;
+            abilityData.Cooldown = cooldown;
+            abilityData.EnergyCost = energyCost;
+            abilityData.TargetType = targetType;
+            abilityData.EffectType = effectType;
+            abilityData.PowerAmount = powerAmount;
+            abilityData.Range = range;
+            abilityData.StunDuration = stunDuration;
+            EditorUtility.SetDirty(abilityData);
+            return abilityData;
+        }
+
+        private static List<AbilityData> GetAbilities(Dictionary<string, AbilityData> abilityAssets, params string[] ids)
+        {
+            var abilities = new List<AbilityData>();
+            if (abilityAssets == null || ids == null)
+            {
+                return abilities;
+            }
+
+            for (var i = 0; i < ids.Length; i++)
+            {
+                if (abilityAssets.TryGetValue(ids[i], out var ability) && ability != null)
+                {
+                    abilities.Add(ability);
+                }
+            }
+
+            return abilities;
+        }
+
+        private static void EnsureAssetFolder(string folderPath)
+        {
+            if (AssetDatabase.IsValidFolder(folderPath))
+            {
+                return;
+            }
+
+            var parent = System.IO.Path.GetDirectoryName(folderPath)?.Replace("\\", "/");
+            var folderName = System.IO.Path.GetFileName(folderPath);
+            if (!string.IsNullOrEmpty(parent) && !string.IsNullOrEmpty(folderName))
+            {
+                AssetDatabase.CreateFolder(parent, folderName);
+            }
+        }
+
         private static CharacterData EnsureCharacterDataAsset(
             string assetName,
             string id,
             string displayName,
             string role,
             int maxHealth,
-            int maxEnergy)
+            int maxEnergy,
+            List<AbilityData> abilities)
         {
             var path = $"{CharacterDataPath}/{assetName}.asset";
             var characterData = AssetDatabase.LoadAssetAtPath<CharacterData>(path);
@@ -1224,6 +1414,11 @@ namespace IsoLight.Editor
             characterData.Role = role;
             characterData.MaxHealth = maxHealth;
             characterData.MaxEnergy = maxEnergy;
+            characterData.Abilities.Clear();
+            if (abilities != null)
+            {
+                characterData.Abilities.AddRange(abilities);
+            }
             EditorUtility.SetDirty(characterData);
 
             return characterData;

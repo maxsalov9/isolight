@@ -29,7 +29,8 @@ MonoBehaviour:
       Mara Vey"
     Status: 0
   - Id: resolve_power_priorities
-    Description: Узнать энергетические приоритеты
+    Description: "\u0423\u0437\u043D\u0430\u0442\u044C \u044D\u043D\u0435\u0440\u0433\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0435
+      \u043F\u0440\u0438\u043E\u0440\u0438\u0442\u0435\u0442\u044B"
     Status: 0
   - Id: inspect_key_systems
     Description: "\u041E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043A\u043B\u044E\u0447\u0435\u0432\u044B\u0435
@@ -40,7 +41,7 @@ MonoBehaviour:
       0/2"
     Status: 0
   - Id: repair_generator_line
-    Description: Починить Generator G-17
+    Description: "\u041F\u043E\u0447\u0438\u043D\u0438\u0442\u044C Generator G-17"
     Status: 0
   - Id: start_generator_g17
     Description: "\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C Generator
@@ -54,8 +55,8 @@ MonoBehaviour:
       \u043F\u0438\u0442\u0430\u043D\u0438\u0435"
     Status: 0
   - Id: face_consequences
-    Description: Посмотреть последствия
+    Description: "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043F\u043E\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0438\u044F"
     Status: 0
   - Id: leave_riverside
-    Description: Завершить миссию
+    Description: "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044C \u043C\u0438\u0441\u0441\u0438\u044E"
     Status: 0
