@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: dax
   DisplayName: Dax
-  Role: Scavenger
+  Role: Практик
   Portrait: {fileID: 0}
   MaxHealth: 100
   MaxEnergy: 50

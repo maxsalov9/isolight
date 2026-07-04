@@ -52,6 +52,7 @@ namespace IsoLight.Editor
             var cameraManager = CreateManager<CameraManager>("CameraManager", gameRoot.transform);
             var partyManager = CreateManager<PartyManager>("PartyManager", gameRoot.transform);
             var questManager = CreateManager<QuestManager>("QuestManager", gameRoot.transform);
+            var missionFlowController = CreateManager<MissionFlowController>("MissionFlowController", gameRoot.transform);
             var dialogueManager = CreateManager<DialogueManager>("DialogueManager", gameRoot.transform);
             var combatManager = CreateManager<CombatManager>("CombatManager", gameRoot.transform);
             var powerManager = CreateManager<PowerManager>("PowerManager", gameRoot.transform);
@@ -63,6 +64,7 @@ namespace IsoLight.Editor
             CreateLevelBlockout(levelRoot.transform, materials);
             TryBuildNavMesh(levelRoot);
             CreateSceneLighting(materials);
+            var resultVisualController = CreatePowerResultVisuals(levelRoot.transform, materials);
 
             var cameraController = CreateMainCamera();
             var clickToMoveController = inputManager.gameObject.AddComponent<ClickToMoveController>();
@@ -77,14 +79,16 @@ namespace IsoLight.Editor
             CreatePlaceholderNpcs(npcsRoot.transform, dialogueAssets, materials);
 
             partyManager.SetPartyMembers(partyCharacters);
-            questManager.SetStartupQuest(questData, "find_breaker_modules");
+            uiRefs.PartyHUDUI.SetPartyManager(partyManager);
+            questManager.SetStartupQuest(questData, MissionFlowController.ReachShelterObjectiveId);
+            missionFlowController.SetReferences(gameManager, questManager, partyManager);
             inputManager.SetReferences(gameManager, partyManager);
             cameraManager.SetReferences(partyManager, cameraController);
             clickToMoveController.SetReferences(gameManager, partyManager, UnityEngine.Camera.main);
             dialogueManager.SetReferences(gameManager, questManager, uiRefs.DialoguePanelUI);
-            powerManager.SetReferences(gameManager, relationshipManager, uiRefs.PowerAllocationBoardUI, uiRefs.ResultPanelUI);
+            powerManager.SetReferences(gameManager, questManager, relationshipManager, uiRefs.PowerAllocationBoardUI, uiRefs.ResultPanelUI, resultVisualController);
             powerManager.SetPowerSystems(powerSystemAssets);
-            combatManager.SetReferences(gameManager, partyManager, questManager, generator, uiRefs.NotificationUI, uiRefs.CombatStatusUI);
+            combatManager.SetReferences(gameManager, partyManager, questManager, generator, uiRefs.NotificationUI, uiRefs.CombatStatusUI, uiRefs.GeneratorStatusUI);
             combatManager.SetEnemyData(enemyDataAssets);
             combatManager.SetEnemyParent(enemiesRoot.transform);
             combatManager.SetSpawnPoints(new[]
@@ -153,6 +157,8 @@ namespace IsoLight.Editor
             public PowerAllocationBoardUI PowerAllocationBoardUI;
             public ResultPanelUI ResultPanelUI;
             public CombatStatusUI CombatStatusUI;
+            public GeneratorStatusUI GeneratorStatusUI;
+            public PartyHUDUI PartyHUDUI;
         }
 
         private static MinimalMaterials EnsureMinimalMaterials()
@@ -267,6 +273,14 @@ namespace IsoLight.Editor
             combatStatusObject.transform.SetParent(parent);
             var combatStatus = combatStatusObject.AddComponent<CombatStatusUI>();
 
+            var generatorStatusObject = new GameObject("GeneratorStatusUI");
+            generatorStatusObject.transform.SetParent(parent);
+            var generatorStatus = generatorStatusObject.AddComponent<GeneratorStatusUI>();
+
+            var partyHudObject = new GameObject("PartyHUDUI");
+            partyHudObject.transform.SetParent(parent);
+            var partyHud = partyHudObject.AddComponent<PartyHUDUI>();
+
             return new PrototypeUiRefs
             {
                 InteractionPromptUI = interactionPrompt,
@@ -275,7 +289,9 @@ namespace IsoLight.Editor
                 DialoguePanelUI = dialoguePanel,
                 PowerAllocationBoardUI = powerBoard,
                 ResultPanelUI = resultPanel,
-                CombatStatusUI = combatStatus
+                CombatStatusUI = combatStatus,
+                GeneratorStatusUI = generatorStatus,
+                PartyHUDUI = partyHud
             };
         }
 
@@ -681,6 +697,60 @@ namespace IsoLight.Editor
             _ = materials;
         }
 
+        private static PowerResultVisualController CreatePowerResultVisuals(Transform parent, MinimalMaterials materials)
+        {
+            var controllerObject = new GameObject("PowerResultVisualController");
+            controllerObject.transform.SetParent(parent);
+            var controller = controllerObject.AddComponent<PowerResultVisualController>();
+
+            var statesRoot = new GameObject("_PowerResultStates");
+            statesRoot.transform.SetParent(parent);
+
+            var states = new List<PowerResultVisualState>
+            {
+                CreatePowerResultState(statesRoot.transform, PowerChoice.WaterFilters, "Result_WaterFilters", new Vector3(-10f, 2.2f, 8f), materials.TechBlue, new Color(0.45f, 0.85f, 1f), 2.8f, 7f, false, true),
+                CreatePowerResultState(statesRoot.transform, PowerChoice.HydroponicFarm, "Result_HydroponicFarm", new Vector3(-4f, 2.2f, 8f), materials.WarmLightSource, new Color(1f, 0.74f, 0.32f), 2.6f, 7f, false, true),
+                CreatePowerResultState(statesRoot.transform, PowerChoice.DefenseGrid, "Result_DefenseGrid", new Vector3(2f, 2.7f, 9.8f), materials.DangerRed, new Color(1f, 0.2f, 0.1f), 2.7f, 8f, true, true),
+                CreatePowerResultState(statesRoot.transform, PowerChoice.PublicStage, "Result_PublicStage", new Vector3(8f, 2.4f, -2.2f), materials.WarmLightSource, new Color(1f, 0.62f, 0.28f), 2.6f, 7f, false, true),
+                CreatePowerResultState(statesRoot.transform, PowerChoice.Workshop, "Result_Workshop", new Vector3(9f, 2.2f, 5f), materials.WarmLightSource, new Color(1f, 0.44f, 0.18f), 2.5f, 7f, false, true),
+                CreatePowerResultState(statesRoot.transform, PowerChoice.RelayStation, "Result_RelayStation", new Vector3(0f, 3.6f, 15f), materials.TechBlue, new Color(0.2f, 0.62f, 1f), 3f, 8f, true, true),
+                CreatePowerResultState(statesRoot.transform, PowerChoice.PartyReserve, "Result_PartyReserve", new Vector3(2.8f, 1.2f, -6f), materials.TechBlue, new Color(0.25f, 0.7f, 1f), 2f, 5f, true, false)
+            };
+
+            controller.SetStates(states);
+            return controller;
+        }
+
+        private static PowerResultVisualState CreatePowerResultState(
+            Transform parent,
+            PowerChoice choice,
+            string name,
+            Vector3 position,
+            Material markerMaterial,
+            Color lightColor,
+            float intensity,
+            float range,
+            bool blink,
+            bool enableForSplitLoad)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent);
+            root.transform.position = position;
+
+            CreateCube(root.transform, $"{name}_Marker", position, new Vector3(0.55f, 0.18f, 0.55f), markerMaterial, false);
+
+            var lightObject = new GameObject($"{name}_Light");
+            lightObject.transform.SetParent(root.transform);
+            lightObject.transform.position = position;
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = lightColor;
+            light.intensity = intensity;
+            light.range = range;
+
+            return new PowerResultVisualState(choice, root, new[] { light }, blink, enableForSplitLoad);
+        }
+
         private static void CreatePointLight(string name, Vector3 position, Color color, float intensity, float range)
         {
             var lightObject = new GameObject(name);
@@ -726,19 +796,19 @@ namespace IsoLight.Editor
             {
                 CreatePlaceholderCharacter(
                     parent,
-                    EnsureCharacterDataAsset("SO_Character_Dax", "dax", "Dax", "Scavenger", 100, 50),
+                    EnsureCharacterDataAsset("SO_Character_Dax", "dax", "Dax", "Практик", 100, 50),
                     new Vector3(-2f, 0f, 0f),
                     materials.WarmLightSource,
                     materials),
                 CreatePlaceholderCharacter(
                     parent,
-                    EnsureCharacterDataAsset("SO_Character_Nyra", "nyra", "Nyra", "Tech", 85, 80),
+                    EnsureCharacterDataAsset("SO_Character_Nyra", "nyra", "Nyra", "Техник", 85, 80),
                     new Vector3(0f, 0f, 0f),
                     materials.TechBlue,
                     materials),
                 CreatePlaceholderCharacter(
                     parent,
-                    EnsureCharacterDataAsset("SO_Character_Cormac", "cormac", "Cormac", "Medic", 95, 65),
+                    EnsureCharacterDataAsset("SO_Character_Cormac", "cormac", "Cormac", "Медик", 95, 65),
                     new Vector3(2f, 0f, 0f),
                     materials.DeadVegetation,
                     materials)
@@ -842,42 +912,42 @@ namespace IsoLight.Editor
                 parent,
                 "Filter Station",
                 PowerSystemType.WaterFilters,
-                "Water Filters inspected.",
+                "Фильтры воды осмотрены.",
                 new Vector3(-8f, 0.5f, 8f),
                 materials.TechBlue);
             CreateInspectableSystem(
                 parent,
                 "Hydroponic Farm",
                 PowerSystemType.HydroponicFarm,
-                "Hydroponic Farm inspected.",
+                "Гидропонная ферма осмотрена.",
                 new Vector3(-4f, 0.5f, 8f),
                 materials.DeadVegetation);
             CreateInspectableSystem(
                 parent,
                 "Defense Gate",
                 PowerSystemType.DefenseGate,
-                "Defense Gate inspected.",
+                "Оборонительные ворота осмотрены.",
                 new Vector3(0f, 0.5f, 8f),
                 materials.DangerRed);
             CreateInspectableSystem(
                 parent,
                 "Public Stage",
                 PowerSystemType.PublicStage,
-                "Public Stage inspected.",
+                "Общественная сцена осмотрена.",
                 new Vector3(4f, 0.5f, 8f),
                 materials.WarmLightSource);
             CreateInspectableSystem(
                 parent,
                 "Workshop",
                 PowerSystemType.Workshop,
-                "Workshop inspected.",
+                "Мастерская осмотрена.",
                 new Vector3(8f, 0.5f, 8f),
                 materials.RustMetal);
             CreateInspectableSystem(
                 parent,
                 "Relay Station",
                 PowerSystemType.RelayStation,
-                "Relay Station inspected.",
+                "Релейная станция осмотрена.",
                 new Vector3(0f, 0.5f, 12f),
                 materials.TechBlue);
 
@@ -901,7 +971,7 @@ namespace IsoLight.Editor
             }
 
             var pickup = moduleObject.AddComponent<BreakerModulePickup>();
-            pickup.Configure("Pick Up Breaker Module", "[Click]", 4.5f);
+            pickup.Configure("Подобрать breaker-модуль", "[Click]", 4.5f);
         }
 
         private static void CreateInspectableSystem(
@@ -925,7 +995,7 @@ namespace IsoLight.Editor
             }
 
             var inspectable = systemObject.AddComponent<InspectablePowerSystem>();
-            inspectable.Configure($"Inspect {displayName}", "[Click]", 5f);
+            inspectable.Configure($"Осмотреть: {displayName}", "[Click]", 5f);
             inspectable.ConfigurePowerSystem(systemType, inspectionMessage);
         }
 
@@ -951,7 +1021,7 @@ namespace IsoLight.Editor
             }
 
             var generator = generatorObject.AddComponent<GeneratorG17>();
-            generator.Configure("Repair / Start Generator G-17", "[Click]", 5f);
+            generator.Configure("Починить / запустить Generator G-17", "[Click]", 5f);
             generator.SetReferences(gameManager, combatManager, questManager, notificationUI);
             return generator;
         }
@@ -978,20 +1048,20 @@ namespace IsoLight.Editor
             }
 
             var console = consoleObject.AddComponent<SwitchRoomConsole>();
-            console.Configure("Use Switch Room Console", "[Click]", 5f);
+            console.Configure("Использовать консоль Switch Room", "[Click]", 5f);
             console.SetReferences(gameManager, questManager, powerManager, notificationUI);
         }
 
         private static void CreatePlaceholderNpcs(Transform parent, Dictionary<string, DialogueData> dialogueAssets, MinimalMaterials materials)
         {
-            CreateNpc(parent, "Mara", "Talk to Mara", dialogueAssets["D01_MARA_INTRO"], new Vector3(0f, 1f, -6f), materials.DirtyPlastic, materials);
-            CreateNpc(parent, "Hale", "Talk to Hale", dialogueAssets["D02_HALE_DEFENSE"], new Vector3(2f, 1f, 7f), materials.DangerRed, materials);
-            CreateNpc(parent, "Ivo", "Talk to Ivo", dialogueAssets["D04_IVO_FARM"], new Vector3(-4.4f, 1f, 6f), materials.DeadVegetation, materials);
-            CreateNpc(parent, "Sela", "Talk to Sela", dialogueAssets["D03_SELA_WATER"], new Vector3(-10f, 1f, 6f), materials.TechBlue, materials);
-            CreateNpc(parent, "Edda", "Talk to Edda", dialogueAssets["D05_EDDA_STAGE"], new Vector3(8f, 1f, -4.2f), materials.WarmLightSource, materials);
-            CreateNpc(parent, "Greer", "Talk to Greer", dialogueAssets["D06_GREER_WORKSHOP"], new Vector3(8f, 1f, 3f), materials.RustMetal, materials);
-            CreateNpc(parent, "Lysa", "Talk to Lysa", dialogueAssets["D07_LYSA_RELAY"], new Vector3(0f, 1f, 13.3f), materials.TechBlue, materials);
-            CreateNpc(parent, "PartyReserveDiscussion", "Discuss Party Reserve", dialogueAssets["D08_PARTY_RESERVE"], new Vector3(2.8f, 1f, -6f), materials.ColdConcrete, materials);
+            CreateNpc(parent, "Mara", "Поговорить с Mara", dialogueAssets["D01_MARA_INTRO"], new Vector3(0f, 1f, -6f), materials.DirtyPlastic, materials);
+            CreateNpc(parent, "Hale", "Поговорить с Hale", dialogueAssets["D02_HALE_DEFENSE"], new Vector3(2f, 1f, 7f), materials.DangerRed, materials);
+            CreateNpc(parent, "Ivo", "Поговорить с Ivo", dialogueAssets["D04_IVO_FARM"], new Vector3(-4.4f, 1f, 6f), materials.DeadVegetation, materials);
+            CreateNpc(parent, "Sela", "Поговорить с Sela", dialogueAssets["D03_SELA_WATER"], new Vector3(-10f, 1f, 6f), materials.TechBlue, materials);
+            CreateNpc(parent, "Edda", "Поговорить с Edda", dialogueAssets["D05_EDDA_STAGE"], new Vector3(8f, 1f, -4.2f), materials.WarmLightSource, materials);
+            CreateNpc(parent, "Greer", "Поговорить с Greer", dialogueAssets["D06_GREER_WORKSHOP"], new Vector3(8f, 1f, 3f), materials.RustMetal, materials);
+            CreateNpc(parent, "Lysa", "Поговорить с Lysa", dialogueAssets["D07_LYSA_RELAY"], new Vector3(0f, 1f, 13.3f), materials.TechBlue, materials);
+            CreateNpc(parent, "PartyReserveDiscussion", "Обсудить резерв отряда", dialogueAssets["D08_PARTY_RESERVE"], new Vector3(2.8f, 1f, -6f), materials.ColdConcrete, materials);
         }
 
         private static void CreateNpc(
@@ -1312,53 +1382,32 @@ namespace IsoLight.Editor
 
             questData.Id = "restore_power_to_riverside";
             questData.Title = "Restore Power to Riverside";
-            questData.Description = "Prototype quest shell for tracking the current mission objective.";
+            questData.Description = "Основная миссия Riverside: восстановить питание, защитить генератор и принять финальное решение.";
             questData.Objectives.Clear();
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "reach_riverside_shelter",
-                Description = "Reach Riverside Shelter",
-                Status = ObjectiveStatus.Hidden
-            });
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "speak_with_mara",
-                Description = "Speak with Mara Vey",
-                Status = ObjectiveStatus.Hidden
-            });
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "resolve_power_priorities",
-                Description = "Resolve Riverside's Power Priorities",
-                Status = ObjectiveStatus.Hidden
-            });
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "inspect_key_systems",
-                Description = "Inspect Key Systems: 0/6",
-                Status = ObjectiveStatus.Hidden
-            });
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "find_breaker_modules",
-                Description = "Find 2 Breaker Modules: 0/2",
-                Status = ObjectiveStatus.Hidden
-            });
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "repair_generator_line",
-                Description = "Repair Generator Line",
-                Status = ObjectiveStatus.Hidden
-            });
-            questData.Objectives.Add(new ObjectiveData
-            {
-                Id = "allocate_power",
-                Description = "Allocate Power",
-                Status = ObjectiveStatus.Hidden
-            });
+            AddObjective(questData, MissionFlowController.ReachShelterObjectiveId, "Добраться до убежища Riverside");
+            AddObjective(questData, MissionFlowController.SpeakWithMaraObjectiveId, "Поговорить с Mara Vey");
+            AddObjective(questData, MissionFlowController.ResolvePowerPrioritiesObjectiveId, "Разобраться с энергетическими приоритетами Riverside");
+            AddObjective(questData, MissionFlowController.InspectKeySystemsObjectiveId, "Осмотреть ключевые системы: 0/6");
+            AddObjective(questData, MissionFlowController.FindBreakerModulesObjectiveId, "Найти 2 breaker-модуля: 0/2");
+            AddObjective(questData, MissionFlowController.RepairGeneratorLineObjectiveId, "Починить линию Generator G-17");
+            AddObjective(questData, MissionFlowController.StartGeneratorObjectiveId, "Запустить Generator G-17");
+            AddObjective(questData, MissionFlowController.DefendGeneratorObjectiveId, "Защитить Generator G-17");
+            AddObjective(questData, MissionFlowController.AllocatePowerObjectiveId, "Распределить питание");
+            AddObjective(questData, MissionFlowController.FaceConsequencesObjectiveId, "Принять последствия решения");
+            AddObjective(questData, MissionFlowController.LeaveRiversideObjectiveId, "Покинуть Riverside / миссия завершена");
 
             EditorUtility.SetDirty(questData);
             return questData;
+        }
+
+        private static void AddObjective(QuestData questData, string id, string description)
+        {
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = id,
+                Description = description,
+                Status = ObjectiveStatus.Hidden
+            });
         }
 
         private static Dictionary<string, DialogueData> EnsureDialogueAssets(QuestData questData)
@@ -1390,8 +1439,8 @@ namespace IsoLight.Editor
                     {
                         SetFlag("has_met_mara"),
                         SetFlag("power_priorities_started"),
-                        StartQuest(questData),
-                        ActivateObjective("resolve_power_priorities")
+                        CompleteObjective(MissionFlowController.SpeakWithMaraObjectiveId),
+                        ActivateObjective(MissionFlowController.ResolvePowerPrioritiesObjectiveId)
                     }),
                 ["D02_HALE_DEFENSE"] = EnsureDialogueAsset(
                     "SO_Dialogue_Hale_Defense",
@@ -1570,6 +1619,15 @@ namespace IsoLight.Editor
             return new DialogueEffect
             {
                 Type = DialogueEffectType.ActivateObjective,
+                Key = objectiveId
+            };
+        }
+
+        private static DialogueEffect CompleteObjective(string objectiveId)
+        {
+            return new DialogueEffect
+            {
+                Type = DialogueEffectType.CompleteObjective,
                 Key = objectiveId
             };
         }

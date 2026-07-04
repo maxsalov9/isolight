@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using IsoLight.Core;
+using IsoLight.Quests;
 using IsoLight.Relationships;
 using IsoLight.UI;
 using UnityEngine;
@@ -11,10 +12,12 @@ namespace IsoLight.Power
         [SerializeField] private int availableStableOutput = 100;
         [SerializeField] private List<PowerSystemData> powerSystems = new List<PowerSystemData>();
         [SerializeField] private GameManager gameManager;
+        [SerializeField] private QuestManager questManager;
         [SerializeField] private RelationshipManager relationshipManager;
         [SerializeField] private PowerAllocationBoardUI powerAllocationBoardUI;
         [SerializeField] private ResultPanelUI resultPanelUI;
         [SerializeField] private NotificationUI notificationUI;
+        [SerializeField] private PowerResultVisualController resultVisualController;
 
         public int AvailableStableOutput => availableStableOutput;
         public IReadOnlyList<PowerSystemData> PowerSystems => powerSystems;
@@ -25,10 +28,23 @@ namespace IsoLight.Power
             PowerAllocationBoardUI allocationBoard,
             ResultPanelUI resultPanel)
         {
+            SetReferences(game, null, relationships, allocationBoard, resultPanel, null);
+        }
+
+        public void SetReferences(
+            GameManager game,
+            QuestManager quests,
+            RelationshipManager relationships,
+            PowerAllocationBoardUI allocationBoard,
+            ResultPanelUI resultPanel,
+            PowerResultVisualController visualController)
+        {
             gameManager = game;
+            questManager = quests;
             relationshipManager = relationships;
             powerAllocationBoardUI = allocationBoard;
             resultPanelUI = resultPanel;
+            resultVisualController = visualController;
         }
 
         public void SetPowerSystems(IEnumerable<PowerSystemData> systems)
@@ -68,7 +84,6 @@ namespace IsoLight.Power
 
             var missionState = gameManager.MissionState;
             missionState.FinalPowerChoice = choice;
-            missionState.MissionCompleted = true;
 
             if (choice == PowerChoice.PartyReserve)
             {
@@ -83,7 +98,9 @@ namespace IsoLight.Power
             result.RelationshipChanges.AddRange(changes);
 
             powerAllocationBoardUI?.Hide();
-            ApplyVisualResultState(choice);
+            questManager?.CompleteObjective(MissionFlowController.AllocatePowerObjectiveId);
+            questManager?.ActivateObjective(MissionFlowController.FaceConsequencesObjectiveId);
+            resultVisualController?.Apply(choice);
 
             if (resultPanelUI != null)
             {
@@ -101,10 +118,14 @@ namespace IsoLight.Power
 
             if (gameManager != null)
             {
+                gameManager.MissionState.MissionCompleted = true;
                 gameManager.CurrentGameMode = GameMode.Exploration;
             }
 
-            notificationUI?.ShowMessage("Riverside mission result recorded.");
+            questManager?.CompleteObjective(MissionFlowController.FaceConsequencesObjectiveId);
+            questManager?.ActivateObjective(MissionFlowController.LeaveRiversideObjectiveId);
+            questManager?.CompleteObjective(MissionFlowController.LeaveRiversideObjectiveId);
+            notificationUI?.ShowMessage("Решение Riverside записано. Миссия завершена.");
         }
 
         private PowerAllocationResult BuildResult(PowerSystemData chosenSystem)
@@ -150,6 +171,11 @@ namespace IsoLight.Power
                 relationshipManager = FindAnyObjectByType<RelationshipManager>();
             }
 
+            if (questManager == null)
+            {
+                questManager = FindAnyObjectByType<QuestManager>();
+            }
+
             if (powerAllocationBoardUI == null)
             {
                 powerAllocationBoardUI = FindAnyObjectByType<PowerAllocationBoardUI>();
@@ -163,6 +189,11 @@ namespace IsoLight.Power
             if (notificationUI == null)
             {
                 notificationUI = FindAnyObjectByType<NotificationUI>();
+            }
+
+            if (resultVisualController == null)
+            {
+                resultVisualController = FindAnyObjectByType<PowerResultVisualController>();
             }
         }
 
@@ -180,31 +211,6 @@ namespace IsoLight.Power
                 PowerChoice.SplitLoad => "Нагрузка разделена осторожно. Никто не получает все, но Riverside видит попытку не бросить ни одну сторону.",
                 _ => "Решение записано."
             };
-        }
-
-        private static void ApplyVisualResultState(PowerChoice choice)
-        {
-            var targetName = choice switch
-            {
-                PowerChoice.WaterFilters => "Filter",
-                PowerChoice.HydroponicFarm => "Farm",
-                PowerChoice.DefenseGrid => "Defense",
-                PowerChoice.PublicStage => "Stage",
-                PowerChoice.Workshop => "Workshop",
-                PowerChoice.RelayStation => "Relay",
-                PowerChoice.PartyReserve => "Shelter",
-                PowerChoice.SplitLoad => string.Empty,
-                _ => string.Empty
-            };
-
-            var lights = FindObjectsByType<Light>(FindObjectsInactive.Exclude);
-            foreach (var sceneLight in lights)
-            {
-                if (choice == PowerChoice.SplitLoad || (!string.IsNullOrEmpty(targetName) && sceneLight.name.Contains(targetName)))
-                {
-                    sceneLight.intensity *= 1.25f;
-                }
-            }
         }
     }
 }

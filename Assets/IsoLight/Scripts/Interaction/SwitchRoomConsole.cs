@@ -38,7 +38,7 @@ namespace IsoLight.Interaction
 
             if (!gameManager.MissionState.GeneratorDefended)
             {
-                const string lockedMessage = "Switch Room Console locked until Generator G-17 is defended.";
+                const string lockedMessage = "Консоль Switch Room заблокирована, пока Generator G-17 не защищен.";
                 Debug.Log(lockedMessage);
                 notificationUI?.ShowMessage(lockedMessage);
                 return;

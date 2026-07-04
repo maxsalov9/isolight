@@ -7,7 +7,7 @@ namespace IsoLight.UI
 {
     public class CombatStatusUI : MonoBehaviour
     {
-        [SerializeField] private Rect panelRect = new Rect(24f, 204f, 360f, 112f);
+        [SerializeField] private Rect panelRect = new Rect(24f, 326f, 360f, 92f);
 
         private CombatManager combatManager;
         private GeneratorG17 generator;
@@ -31,17 +31,15 @@ namespace IsoLight.UI
             labelStyle ??= CreateLabelStyle();
 
             GUI.Box(panelRect, GUIContent.none, panelStyle);
-            var generatorHealth = generator != null ? $"{generator.CurrentHealth}/{generator.MaxHealth}" : "unknown";
-            GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 10f, panelRect.width - 24f, 24f), $"Generator G-17 HP: {generatorHealth}", labelStyle);
-            GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 42f, panelRect.width - 24f, 24f), $"Raiders remaining: {combatManager.LivingEnemyCount}", labelStyle);
-            GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 66f, panelRect.width - 24f, 24f), FormatFocusedEnemy(combatManager.FocusedEnemy), labelStyle);
+            GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 10f, panelRect.width - 24f, 24f), $"Рейдеров осталось: {combatManager.LivingEnemyCount}", labelStyle);
+            GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 40f, panelRect.width - 24f, 24f), FormatFocusedEnemy(combatManager.FocusedEnemy), labelStyle);
         }
 
         private static string FormatFocusedEnemy(Enemy enemy)
         {
             return enemy != null && enemy.IsAlive
-                ? $"Target HP: {enemy.CurrentHealth}/{enemy.MaxHealth}"
-                : "Target HP: none";
+                ? $"Цель HP: {enemy.CurrentHealth}/{enemy.MaxHealth}"
+                : "Цель HP: нет";
         }
 
         private static GUIStyle CreatePanelStyle()

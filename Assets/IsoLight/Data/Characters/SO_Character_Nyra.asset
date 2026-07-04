@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: nyra
   DisplayName: Nyra
-  Role: Tech
+  Role: Техник
   Portrait: {fileID: 0}
   MaxHealth: 85
   MaxEnergy: 80

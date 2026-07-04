@@ -66,10 +66,10 @@ MonoBehaviour:
         Key: power_priorities_started
         BoolValue: 1
         Quest: {fileID: 0}
-      - Type: 2
-        Key: 
+      - Type: 4
+        Key: speak_with_mara
         BoolValue: 1
-        Quest: {fileID: 11400000, guid: 432350eec36e457598b9b5cf4c9dac8d, type: 2}
+        Quest: {fileID: 0}
       - Type: 3
         Key: resolve_power_priorities
         BoolValue: 1
@@ -87,10 +87,10 @@ MonoBehaviour:
         Key: power_priorities_started
         BoolValue: 1
         Quest: {fileID: 0}
-      - Type: 2
-        Key: 
+      - Type: 4
+        Key: speak_with_mara
         BoolValue: 1
-        Quest: {fileID: 11400000, guid: 432350eec36e457598b9b5cf4c9dac8d, type: 2}
+        Quest: {fileID: 0}
       - Type: 3
         Key: resolve_power_priorities
         BoolValue: 1
@@ -107,10 +107,10 @@ MonoBehaviour:
         Key: power_priorities_started
         BoolValue: 1
         Quest: {fileID: 0}
-      - Type: 2
-        Key: 
+      - Type: 4
+        Key: speak_with_mara
         BoolValue: 1
-        Quest: {fileID: 11400000, guid: 432350eec36e457598b9b5cf4c9dac8d, type: 2}
+        Quest: {fileID: 0}
       - Type: 3
         Key: resolve_power_priorities
         BoolValue: 1

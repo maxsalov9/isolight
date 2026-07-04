@@ -14,26 +14,38 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Id: restore_power_to_riverside
   Title: Restore Power to Riverside
-  Description: Prototype quest shell for tracking the current mission objective.
+  Description: Основная миссия Riverside: восстановить питание, защитить генератор и принять финальное решение.
   Objectives:
   - Id: reach_riverside_shelter
-    Description: Reach Riverside Shelter
+    Description: Добраться до убежища Riverside
     Status: 0
   - Id: speak_with_mara
-    Description: Speak with Mara Vey
+    Description: Поговорить с Mara Vey
     Status: 0
   - Id: resolve_power_priorities
-    Description: Resolve Riverside's Power Priorities
+    Description: Разобраться с энергетическими приоритетами Riverside
     Status: 0
   - Id: inspect_key_systems
-    Description: 'Inspect Key Systems: 0/6'
+    Description: 'Осмотреть ключевые системы: 0/6'
     Status: 0
   - Id: find_breaker_modules
-    Description: 'Find 2 Breaker Modules: 0/2'
+    Description: 'Найти 2 breaker-модуля: 0/2'
     Status: 0
   - Id: repair_generator_line
-    Description: Repair Generator Line
+    Description: Починить линию Generator G-17
+    Status: 0
+  - Id: start_generator_g17
+    Description: Запустить Generator G-17
+    Status: 0
+  - Id: defend_generator_g17
+    Description: Защитить Generator G-17
     Status: 0
   - Id: allocate_power
-    Description: Allocate Power
+    Description: Распределить питание
+    Status: 0
+  - Id: face_consequences
+    Description: Принять последствия решения
+    Status: 0
+  - Id: leave_riverside
+    Description: Покинуть Riverside / миссия завершена
     Status: 0

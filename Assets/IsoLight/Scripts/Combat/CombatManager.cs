@@ -20,6 +20,7 @@ namespace IsoLight.Combat
         [SerializeField] private GeneratorG17 generator;
         [SerializeField] private NotificationUI notificationUI;
         [SerializeField] private CombatStatusUI combatStatusUI;
+        [SerializeField] private GeneratorStatusUI generatorStatusUI;
         [SerializeField] private List<EnemyData> enemyData = new List<EnemyData>();
         [SerializeField] private List<Vector3> spawnPoints = new List<Vector3>();
 
@@ -36,7 +37,8 @@ namespace IsoLight.Combat
             QuestManager quest,
             GeneratorG17 targetGenerator,
             NotificationUI notifications,
-            CombatStatusUI statusUI)
+            CombatStatusUI statusUI,
+            GeneratorStatusUI generatorStatus)
         {
             gameManager = game;
             partyManager = party;
@@ -44,6 +46,7 @@ namespace IsoLight.Combat
             generator = targetGenerator;
             notificationUI = notifications;
             combatStatusUI = statusUI;
+            generatorStatusUI = generatorStatus;
         }
 
         public void SetEnemyData(IEnumerable<EnemyData> enemies)
@@ -84,7 +87,8 @@ namespace IsoLight.Combat
             FocusedEnemy = null;
             SpawnEnemies();
             combatStatusUI?.SetReferences(this, generator);
-            notificationUI?.ShowMessage("Combat started: defend Generator G-17.");
+            generatorStatusUI?.SetReferences(this, generator);
+            notificationUI?.ShowMessage("Бой начался: защитите Generator G-17.");
 
             if (livingEnemies.Count == 0)
             {
@@ -107,7 +111,7 @@ namespace IsoLight.Combat
 
             if (!attacker.TryAttack(enemy))
             {
-                notificationUI?.ShowMessage("Target out of range or attack cooling down.");
+                notificationUI?.ShowMessage("Цель слишком далеко или атака еще восстанавливается.");
             }
 
             FocusedEnemy = enemy;
@@ -120,7 +124,7 @@ namespace IsoLight.Combat
                 return;
             }
 
-            notificationUI?.ShowMessage("Generator destroyed — restart encounter.");
+            notificationUI?.ShowMessage("Генератор уничтожен — столкновение нужно переиграть.");
             EndCombat(false);
         }
 
@@ -168,6 +172,7 @@ namespace IsoLight.Combat
 
             var ai = enemyObject.AddComponent<EnemyAI>();
             ai.SetReferences(this, partyManager, generator);
+            enemyObject.AddComponent<EnemyHealthBarUI>();
 
             return enemy;
         }
@@ -214,8 +219,9 @@ namespace IsoLight.Combat
 
             if (victory)
             {
+                questManager?.CompleteObjective(MissionFlowController.DefendGeneratorObjectiveId);
                 questManager?.ActivateObjective(AllocatePowerObjectiveId);
-                notificationUI?.ShowMessage("Generator defended. Switch Room is unlocked.");
+                notificationUI?.ShowMessage("Генератор защищен. Комната переключателей разблокирована.");
             }
         }
 
@@ -249,6 +255,11 @@ namespace IsoLight.Combat
             if (combatStatusUI == null)
             {
                 combatStatusUI = FindAnyObjectByType<CombatStatusUI>();
+            }
+
+            if (generatorStatusUI == null)
+            {
+                generatorStatusUI = FindAnyObjectByType<GeneratorStatusUI>();
             }
         }
 

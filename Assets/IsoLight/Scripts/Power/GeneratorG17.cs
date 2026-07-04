@@ -21,11 +21,14 @@ namespace IsoLight.Power
         [SerializeField] private QuestManager questManager;
         [SerializeField] private NotificationUI notificationUI;
 
+        private float lastDamageTime = -100f;
+
         public int MaxHealth => maxHealth;
         public int CurrentHealth => currentHealth;
         public bool IsAlive => currentHealth > 0;
         public bool IsRepaired => isRepaired;
         public bool IsStarted => isStarted;
+        public bool WasRecentlyDamaged => Time.time - lastDamageTime <= 2f;
 
         protected override void Awake()
         {
@@ -63,7 +66,7 @@ namespace IsoLight.Power
                 return;
             }
 
-            notificationUI?.ShowMessage("Generator G-17 is already running.");
+            notificationUI?.ShowMessage("Generator G-17 уже работает.");
         }
 
         public void TakeDamage(int amount)
@@ -74,6 +77,7 @@ namespace IsoLight.Power
             }
 
             currentHealth = Mathf.Max(0, currentHealth - amount);
+            lastDamageTime = Time.time;
             if (currentHealth <= 0)
             {
                 combatManager?.HandleGeneratorDestroyed();
@@ -89,7 +93,7 @@ namespace IsoLight.Power
 
             if (gameManager.MissionState.BreakerModulesCollected < 2)
             {
-                notificationUI?.ShowMessage("Generator G-17 needs 2 breaker modules before repair.");
+                notificationUI?.ShowMessage("Generator G-17 требует 2 breaker-модуля для ремонта.");
                 return;
             }
 
@@ -97,7 +101,8 @@ namespace IsoLight.Power
             currentHealth = maxHealth;
             gameManager.MissionState.GeneratorRepaired = true;
             questManager?.CompleteObjective(RepairObjectiveId);
-            notificationUI?.ShowMessage("Generator G-17 repaired. Interact again to start it.");
+            questManager?.ActivateObjective(MissionFlowController.StartGeneratorObjectiveId);
+            notificationUI?.ShowMessage("Generator G-17 отремонтирован. Взаимодействуйте еще раз, чтобы запустить его.");
         }
 
         private void StartGenerator()
@@ -109,7 +114,9 @@ namespace IsoLight.Power
 
             isStarted = true;
             gameManager.MissionState.GeneratorStarted = true;
-            notificationUI?.ShowMessage("Generator G-17 started. Raiders incoming.");
+            questManager?.CompleteObjective(MissionFlowController.StartGeneratorObjectiveId);
+            questManager?.ActivateObjective(MissionFlowController.DefendGeneratorObjectiveId);
+            notificationUI?.ShowMessage("Generator G-17 запущен. Рейдеры приближаются.");
             combatManager?.StartCombat();
         }
 

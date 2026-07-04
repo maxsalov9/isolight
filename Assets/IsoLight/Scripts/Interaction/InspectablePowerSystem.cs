@@ -53,7 +53,7 @@ namespace IsoLight.Interaction
             var inspectedCount = CountInspectedSystems(gameManager.MissionState);
             questManager?.UpdateObjectiveDescription(
                 InspectKeySystemsObjectiveId,
-                $"Inspect Key Systems: {inspectedCount}/{RequiredInspections}");
+                $"Осмотреть ключевые системы: {inspectedCount}/{RequiredInspections}");
 
             if (inspectedCount >= RequiredInspections)
             {
@@ -66,7 +66,7 @@ namespace IsoLight.Interaction
             }
 
             var message = string.IsNullOrWhiteSpace(inspectionMessage)
-                ? $"{InteractionName} inspected."
+                ? $"{InteractionName}: осмотр завершен."
                 : inspectionMessage;
             notificationUI?.ShowMessage(message);
         }

@@ -46,7 +46,7 @@ namespace IsoLight.Interaction
                 RequiredBreakerModules);
 
             UpdateBreakerObjective();
-            notificationUI?.ShowMessage($"Breaker module collected: {gameManager.MissionState.BreakerModulesCollected}/{RequiredBreakerModules}");
+            notificationUI?.ShowMessage($"Breaker-модуль найден: {gameManager.MissionState.BreakerModulesCollected}/{RequiredBreakerModules}");
             gameObject.SetActive(false);
         }
 
@@ -78,7 +78,7 @@ namespace IsoLight.Interaction
             var collectedCount = gameManager.MissionState.BreakerModulesCollected;
             questManager.UpdateObjectiveDescription(
                 FindBreakerModulesObjectiveId,
-                $"Find 2 Breaker Modules: {collectedCount}/{RequiredBreakerModules}");
+                $"Найти 2 breaker-модуля: {collectedCount}/{RequiredBreakerModules}");
 
             if (collectedCount >= RequiredBreakerModules)
             {

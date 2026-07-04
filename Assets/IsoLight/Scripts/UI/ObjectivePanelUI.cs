@@ -49,7 +49,7 @@ namespace IsoLight.UI
             }
 
             panelStyle ??= CreatePanelStyle();
-            GUI.Box(new Rect(screenPosition, size), $"Objective: {activeObjective.Description}", panelStyle);
+            GUI.Box(new Rect(screenPosition, size), $"Цель: {activeObjective.Description}", panelStyle);
         }
 
         private void HandleObjectiveChanged(ObjectiveData objective)

@@ -27,6 +27,7 @@ namespace IsoLight.Characters
         public string CharacterId => characterData != null ? characterData.Id : name;
         public string DisplayName => characterData != null ? characterData.DisplayName : name;
         public int MaxHealth => characterData != null ? characterData.MaxHealth : 1;
+        public int MaxEnergy => characterData != null ? characterData.MaxEnergy : 1;
         public int CurrentHealth => currentHealth;
         public int CurrentEnergy => currentEnergy;
         public bool IsAlive => currentHealth > 0;
