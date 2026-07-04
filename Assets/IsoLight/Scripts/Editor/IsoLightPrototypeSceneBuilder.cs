@@ -6,6 +6,7 @@ using IsoLight.Combat;
 using IsoLight.Core;
 using IsoLight.Dialogue;
 using IsoLight.Input;
+using IsoLight.Interaction;
 using IsoLight.Party;
 using IsoLight.Power;
 using IsoLight.Quests;
@@ -24,6 +25,7 @@ namespace IsoLight.Editor
     {
         private const string ScenePath = "Assets/IsoLight/Scenes/Prototype/Riverside_Prototype.unity";
         private const string CharacterDataPath = "Assets/IsoLight/Data/Characters";
+        private const string QuestDataPath = "Assets/IsoLight/Data/Quests";
 
         [MenuItem("IsoLight/Build Riverside Prototype Scene")]
         public static void BuildRiversidePrototypeScene()
@@ -57,8 +59,13 @@ namespace IsoLight.Editor
             var cameraController = CreateMainCamera();
             var clickToMoveController = inputManager.gameObject.AddComponent<ClickToMoveController>();
             var partyCharacters = CreatePlaceholderParty(playerPartyRoot.transform);
+            var questData = EnsureQuestDataAsset();
+
+            CreatePlaceholderUI(uiRoot.transform, questManager);
+            CreatePrototypeInteractable(interactablesRoot.transform);
 
             partyManager.SetPartyMembers(partyCharacters);
+            questManager.SetStartupQuest(questData, "reach_riverside_shelter");
             inputManager.SetReferences(gameManager, partyManager);
             cameraManager.SetReferences(partyManager, cameraController);
             clickToMoveController.SetReferences(gameManager, partyManager, UnityEngine.Camera.main);
@@ -97,6 +104,18 @@ namespace IsoLight.Editor
             var managerObject = new GameObject(name);
             managerObject.transform.SetParent(parent);
             return managerObject.AddComponent<T>();
+        }
+
+        private static void CreatePlaceholderUI(Transform parent, QuestManager questManager)
+        {
+            var promptObject = new GameObject("InteractionPromptUI");
+            promptObject.transform.SetParent(parent);
+            promptObject.AddComponent<InteractionPromptUI>();
+
+            var objectiveObject = new GameObject("ObjectivePanelUI");
+            objectiveObject.transform.SetParent(parent);
+            var objectivePanel = objectiveObject.AddComponent<ObjectivePanelUI>();
+            objectivePanel.SetQuestManager(questManager);
         }
 
         private static void CreateGround(Transform parent)
@@ -207,6 +226,24 @@ namespace IsoLight.Editor
             return playerCharacter;
         }
 
+        private static void CreatePrototypeInteractable(Transform parent)
+        {
+            var interactableObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            interactableObject.name = "Prototype_Interactable_Notice";
+            interactableObject.transform.SetParent(parent);
+            interactableObject.transform.position = new Vector3(0f, 0.5f, 4f);
+            interactableObject.transform.localScale = new Vector3(1.5f, 1f, 0.4f);
+
+            var renderer = interactableObject.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = CreateRuntimeMaterial("MAT_Runtime_Interactable", new Color(0.45f, 0.42f, 0.35f));
+            }
+
+            var interactable = interactableObject.AddComponent<InteractableObject>();
+            interactable.Configure("Inspect Notice", "[Click]", 3f);
+        }
+
         private static CharacterData EnsureCharacterDataAsset(
             string assetName,
             string id,
@@ -232,6 +269,45 @@ namespace IsoLight.Editor
             EditorUtility.SetDirty(characterData);
 
             return characterData;
+        }
+
+        private static QuestData EnsureQuestDataAsset()
+        {
+            const string questAssetName = "SO_Quest_RestorePowerToRiverside";
+            var path = $"{QuestDataPath}/{questAssetName}.asset";
+            var questData = AssetDatabase.LoadAssetAtPath<QuestData>(path);
+
+            if (questData == null)
+            {
+                questData = ScriptableObject.CreateInstance<QuestData>();
+                AssetDatabase.CreateAsset(questData, path);
+            }
+
+            questData.Id = "restore_power_to_riverside";
+            questData.Title = "Restore Power to Riverside";
+            questData.Description = "Prototype quest shell for tracking the current mission objective.";
+            questData.Objectives.Clear();
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = "reach_riverside_shelter",
+                Description = "Reach Riverside Shelter",
+                Status = ObjectiveStatus.Hidden
+            });
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = "speak_with_mara",
+                Description = "Speak with Mara Vey",
+                Status = ObjectiveStatus.Hidden
+            });
+            questData.Objectives.Add(new ObjectiveData
+            {
+                Id = "inspect_key_systems",
+                Description = "Inspect key systems",
+                Status = ObjectiveStatus.Hidden
+            });
+
+            EditorUtility.SetDirty(questData);
+            return questData;
         }
 
         private static Material CreateRuntimeMaterial(string name, Color color)

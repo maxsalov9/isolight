@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 989049193334444b9094f4236c6c8656, type: 3}
+  m_Name: SO_Quest_RestorePowerToRiverside
+  m_EditorClassIdentifier: 
+  Id: restore_power_to_riverside
+  Title: Restore Power to Riverside
+  Description: Prototype quest shell for tracking the current mission objective.
+  Objectives:
+  - Id: reach_riverside_shelter
+    Description: Reach Riverside Shelter
+    Status: 0
+  - Id: speak_with_mara
+    Description: Speak with Mara Vey
+    Status: 0
+  - Id: inspect_key_systems
+    Description: Inspect key systems
+    Status: 0

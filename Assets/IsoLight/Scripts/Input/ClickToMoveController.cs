@@ -1,5 +1,6 @@
 using System;
 using IsoLight.Core;
+using IsoLight.Interaction;
 using IsoLight.Party;
 using UnityEngine;
 
@@ -52,6 +53,11 @@ namespace IsoLight.Input
             var ray = raycastCamera.ScreenPointToRay(GetPointerPosition());
             if (Physics.Raycast(ray, out var hit, raycastDistance, groundLayer, QueryTriggerInteraction.Ignore))
             {
+                if (hit.collider.GetComponentInParent<InteractableObject>() != null)
+                {
+                    return;
+                }
+
                 partyManager.MoveActiveCharacterTo(hit.point);
             }
         }
